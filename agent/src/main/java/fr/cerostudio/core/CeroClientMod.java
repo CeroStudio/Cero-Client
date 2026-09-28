@@ -37,22 +37,14 @@ public final class CeroClientMod implements ClientModInitializer {
             return;
         }
 
-        // Messages entrants du launcher (NOTIFY;..., PING;..., etc.)
-        connection.setMessageHandler(new LauncherConnection.MessageHandler() {
-            @Override
-            public void onMessage(String message) {
-                LOGGER.info("Message du launcher : " + message);
-                // TODO: dispatch selon le préfixe (notifications in-game, etc.)
-            }
-        });
+        CeroApi.launcher().bind(port, connection);
 
-        // Fin de partie (exit normal, SIGTERM, crash non fatal) :
-        // on révèle la fenêtre du launcher AVANT de couper la socket.
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
                 connection.send("SHOW");
                 connection.disconnect();
+                CeroApi.scheduler().shutdown();
             }
         }, "Cero-Bridge-Shutdown"));
 

@@ -2,8 +2,11 @@ package fr.cerostudio.api;
 
 import fr.cerostudio.api.capability.CapabilitySet;
 import fr.cerostudio.api.event.EventBus;
+import fr.cerostudio.api.launcher.LauncherApi;
 import fr.cerostudio.api.mod.ModLoader;
 import fr.cerostudio.api.player.PlayerIdentity;
+import fr.cerostudio.api.runtime.RuntimeApi;
+import fr.cerostudio.api.scheduler.Scheduler;
 import fr.cerostudio.api.service.ServiceRegistry;
 import fr.cerostudio.api.window.WindowApi;
 import fr.cerostudio.api.launch.LaunchInfo;
@@ -17,6 +20,9 @@ public final class CeroApi {
     private static CapabilitySet capabilitySet;
     private static PlayerIdentity playerIdentity;
     private static WindowApi windowApi;
+    private static Scheduler scheduler;
+    private static LauncherApi launcherApi;
+    private static RuntimeApi runtimeApi;
 
     private CeroApi() {}
 
@@ -33,6 +39,9 @@ public final class CeroApi {
         modLoader = loader;
         playerIdentity = identity;
         windowApi = new WindowApi();
+        scheduler = new Scheduler(eventBus);
+        launcherApi = new LauncherApi();
+        runtimeApi = new RuntimeApi();
     }
 
     public static EventBus events() {
@@ -57,6 +66,18 @@ public final class CeroApi {
 
     public static WindowApi window() {
         return require(windowApi, "WindowApi");
+    }
+
+    public static Scheduler scheduler() {
+        return require(scheduler, "Scheduler");
+    }
+
+    public static LauncherApi launcher() {
+        return require(launcherApi, "LauncherApi");
+    }
+
+    public static RuntimeApi runtime() {
+        return require(runtimeApi, "RuntimeApi");
     }
 
     public static String minecraftVersion() {
