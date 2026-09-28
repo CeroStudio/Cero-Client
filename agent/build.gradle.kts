@@ -45,7 +45,8 @@ tasks.shadowJar {
     manifest {
         attributes(
             "Main-Class" to "fr.cerostudio.Main",
-            "MixinConfigs" to "mixins.cero.json"
+            "MixinConfigs" to "mixins.cero.json",
+            "Implementation-Version" to project.version.toString()
         )
     }
 

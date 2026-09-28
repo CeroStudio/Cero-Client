@@ -1,6 +1,7 @@
 package fr.cerostudio.core;
 
 import fr.cerostudio.api.CeroApi;
+import fr.cerostudio.api.event.client.GameStopEvent;
 import fr.cerostudio.api.mod.ClientModInitializer;
 import fr.cerostudio.core.launcher.LauncherArgs;
 import fr.cerostudio.core.launcher.LauncherConnection;
@@ -20,6 +21,7 @@ public final class CeroClientMod implements ClientModInitializer {
         CeroApi.window().setTitle("CeroClient - " + version + " - " + pseudo);
 
         connectToLauncher();
+        registerShutdownHook();
     }
 
     private void connectToLauncher() {
@@ -31,7 +33,7 @@ public final class CeroClientMod implements ClientModInitializer {
             return;
         }
 
-        final LauncherConnection connection = new LauncherConnection(port);
+        LauncherConnection connection = new LauncherConnection(port);
         if (!connection.connect()) {
             LOGGER.warning("Échec de connexion au launcher sur le port " + port);
             return;
@@ -39,19 +41,41 @@ public final class CeroClientMod implements ClientModInitializer {
 
         CeroApi.launcher().bind(port, connection);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                connection.send("SHOW");
-                connection.disconnect();
-                CeroApi.scheduler().shutdown();
-            }
-        }, "Cero-Bridge-Shutdown"));
-
         connection.send("HELLO;CeroClient;" + CeroApi.minecraftVersion());
 
         CeroApi.services().register(LauncherConnection.class, connection);
         this.launcherConnection = connection;
+    }
+
+    private void registerShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    CeroApi.events().post(new GameStopEvent(System.currentTimeMillis()));
+                } catch (Throwable t) {
+                    LOGGER.warning("GameStopEvent en échec : " + t);
+                }
+                LauncherConnection connection = launcherConnection;
+                if (connection != null) {
+                    try {
+                        connection.send("SHOW");
+                    } catch (Throwable t) {
+                        LOGGER.warning("SHOW en échec : " + t);
+                    }
+                    try {
+                        connection.disconnect();
+                    } catch (Throwable t) {
+                        LOGGER.warning("Déconnexion en échec : " + t);
+                    }
+                }
+                try {
+                    CeroApi.scheduler().shutdown();
+                } catch (Throwable t) {
+                    LOGGER.warning("Arrêt du scheduler en échec : " + t);
+                }
+            }
+        }, "Cero-Shutdown"));
     }
 
     public LauncherConnection getLauncherConnection() {

@@ -1,6 +1,8 @@
 package fr.cerostudio.api.runtime;
 
 import java.lang.management.ManagementFactory;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public final class RuntimeApi {
 
@@ -56,5 +58,31 @@ public final class RuntimeApi {
 
     public long jvmUptimeMs() {
         return ManagementFactory.getRuntimeMXBean().getUptime();
+    }
+
+    public long pid() {
+        String name = ManagementFactory.getRuntimeMXBean().getName();
+        int separator = name.indexOf('@');
+        try {
+            return Long.parseLong(separator > 0 ? name.substring(0, separator) : name);
+        } catch (NumberFormatException e) {
+            return -1L;
+        }
+    }
+
+    public String gameDir() {
+        return System.getProperty("user.dir", ".");
+    }
+
+    public String javaHome() {
+        return System.getProperty("java.home", "inconnu");
+    }
+
+    public String locale() {
+        return Locale.getDefault().toString();
+    }
+
+    public String timezone() {
+        return TimeZone.getDefault().getID();
     }
 }

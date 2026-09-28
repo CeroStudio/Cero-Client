@@ -1,15 +1,23 @@
 package fr.cerostudio.api;
 
 import fr.cerostudio.api.capability.CapabilitySet;
+import fr.cerostudio.api.config.ConfigApi;
+import fr.cerostudio.api.discord.DiscordApi;
 import fr.cerostudio.api.event.EventBus;
+import fr.cerostudio.api.http.HttpApi;
+import fr.cerostudio.api.launch.LaunchInfo;
 import fr.cerostudio.api.launcher.LauncherApi;
+import fr.cerostudio.api.logger.LoggerApi;
 import fr.cerostudio.api.mod.ModLoader;
 import fr.cerostudio.api.player.PlayerIdentity;
 import fr.cerostudio.api.runtime.RuntimeApi;
 import fr.cerostudio.api.scheduler.Scheduler;
 import fr.cerostudio.api.service.ServiceRegistry;
+import fr.cerostudio.api.session.SessionApi;
+import fr.cerostudio.api.util.UtilApi;
+import fr.cerostudio.api.version.VersionApi;
 import fr.cerostudio.api.window.WindowApi;
-import fr.cerostudio.api.launch.LaunchInfo;
+
 import java.util.Map;
 
 public final class CeroApi {
@@ -23,6 +31,14 @@ public final class CeroApi {
     private static Scheduler scheduler;
     private static LauncherApi launcherApi;
     private static RuntimeApi runtimeApi;
+    private static SessionApi sessionApi;
+    private static UtilApi utilApi;
+    private static DiscordApi discordApi;
+    private static HttpApi httpApi;
+    private static ConfigApi configApi;
+    private static LoggerApi loggerApi;
+    private static VersionApi versionApi;
+    private static volatile LaunchInfo launchInfo;
 
     private CeroApi() {}
 
@@ -42,6 +58,36 @@ public final class CeroApi {
         scheduler = new Scheduler(eventBus);
         launcherApi = new LauncherApi();
         runtimeApi = new RuntimeApi();
+        sessionApi = new SessionApi(eventBus, System.currentTimeMillis());
+        utilApi = new UtilApi();
+        discordApi = new DiscordApi(launcherApi);
+        httpApi = new HttpApi();
+        configApi = new ConfigApi(eventBus);
+        loggerApi = new LoggerApi();
+        versionApi = new VersionApi(capabilities.mcVersion());
+    }
+
+    public static void captureLaunchArguments(String[] args) {
+        if (launchInfo != null) {
+            return;
+        }
+        launchInfo = LaunchInfo.capture(args);
+    }
+
+    public static String[] launchArguments() {
+        return require(launchInfo, "LaunchInfo").raw();
+    }
+
+    public static Map<String, String> getArguments() {
+        return require(launchInfo, "LaunchInfo").all();
+    }
+
+    public static String getArgument(String key) {
+        return require(launchInfo, "LaunchInfo").get(key);
+    }
+    
+    public static LaunchInfo launch() {
+        return require(launchInfo, "LaunchInfo");
     }
 
     public static EventBus events() {
@@ -80,31 +126,36 @@ public final class CeroApi {
         return require(runtimeApi, "RuntimeApi");
     }
 
+    public static SessionApi session() {
+        return require(sessionApi, "SessionApi");
+    }
+
+    public static UtilApi util() {
+        return require(utilApi, "UtilApi");
+    }
+
+    public static DiscordApi discord() {
+        return require(discordApi, "DiscordApi");
+    }
+
+    public static HttpApi http() {
+        return require(httpApi, "HttpApi");
+    }
+
+    public static ConfigApi config() {
+        return require(configApi, "ConfigApi");
+    }
+
+    public static LoggerApi logger() {
+        return require(loggerApi, "LoggerApi");
+    }
+
+    public static VersionApi version() {
+        return require(versionApi, "VersionApi");
+    }
+
     public static String minecraftVersion() {
         return capabilities().mcVersion();
-    }
-
-    private static volatile LaunchInfo launchInfo;
-
-    public static void captureLaunchArguments(String[] args) {
-        if (launchInfo != null) return;
-        launchInfo = LaunchInfo.capture(args);
-    }
-
-    public static String[] launchArguments() {
-        return require(launchInfo, "LaunchInfo").raw();
-    }
-
-    public static Map<String, String> getArguments() {
-        return require(launchInfo, "LaunchInfo").all();
-    }
-
-    public static String getArgument(String key) {
-        return require(launchInfo, "LaunchInfo").get(key);
-    }
-
-    public static LaunchInfo launch() {
-        return require(launchInfo, "LaunchInfo");
     }
 
     private static <T> T require(T value, String name) {
