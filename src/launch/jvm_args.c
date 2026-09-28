@@ -110,6 +110,7 @@ int build_launch_argv(const LaunchParams* p, const char** argv, int max_argv,
     argv[n++] = arg_launcher_brand;
     argv[n++] = "-Dminecraft.launcher.version=1.0";
     argv[n++] = arg_client_brand;
+    argv[n++] = arg_bridge_port;
 
     for (int i = 0; i < p->extra_jvm_count; i++) argv[n++] = p->extra_jvm_args[i];
 
@@ -142,8 +143,6 @@ int build_launch_argv(const LaunchParams* p, const char** argv, int max_argv,
     argv[n++] = "--ceroMcVersion"; argv[n++] = p->vanilla_version;
 
     for (int i = 0; i < p->extra_game_count; i++) argv[n++] = p->extra_game_args[i];
-
-    argv[n++] = arg_bridge_port;
 
     argv[n] = NULL;
     return n;

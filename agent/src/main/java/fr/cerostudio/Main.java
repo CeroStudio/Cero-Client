@@ -43,6 +43,8 @@ public class Main {
                 i++;
             } else if ("--ceroPort".equals(args[i]) && i + 1 < args.length) {
                 i++;
+            } else if (args[i].startsWith("-Dceroclient.launcher.port=")) {
+                // not forwaded
             } else {
                 forwardedArgs.add(args[i]);
             }
