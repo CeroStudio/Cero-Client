@@ -37,9 +37,12 @@
 
 int launcher_parse_args(int argc, char** argv, LauncherOptions* opts) {
     opts->assets_path = "assets.dat";
+    opts->launch_version = NULL;
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "--customAssetsPath=", 19) == 0) {
             opts->assets_path = argv[i] + 19;
+        } else if (strncmp(argv[i], "--launch=", 9) == 0 && argv[i][9] != '\0') {
+            opts->launch_version = argv[i] + 9;
         }
     }
     return 1;
@@ -47,7 +50,8 @@ int launcher_parse_args(int argc, char** argv, LauncherOptions* opts) {
 
 int launcher_init(const LauncherOptions* opts) {
     bridge_start();
-    single_instance_write_port(local_bridge_port);
+    if (!opts->launch_version)
+        single_instance_write_port(local_bridge_port);
 
     init_config();
     instances_init();
@@ -127,7 +131,6 @@ void launcher_bind_ui(void) {
     ui_bind(w, "quit_app", on_quit_app, w);
     ui_bind(w, "get_system_ram", on_get_system_ram, w);
 
-    /* Instance system */
     ui_bind(w, "list_instances", on_list_instances, w);
     ui_bind(w, "create_instance", on_create_instance, w);
     ui_bind(w, "delete_instance", on_delete_instance, w);

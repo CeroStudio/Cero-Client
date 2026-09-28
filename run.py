@@ -29,7 +29,7 @@ def assets_path():
     return os.path.join("bin", "assets", "assets.dat")
 
 
-def run_client():
+def run_client(extra_args=None):
     path = binary_path()
     if not os.path.exists(path):
         fail_(f"{path} not found - build step did not produce a binary")
@@ -43,11 +43,21 @@ def run_client():
     result = subprocess.run([
         os.path.abspath(path),
         f"--customAssetsPath={os.path.abspath(assets)}",
+        *(extra_args or []),
     ])
     if result.returncode != 0:
         warn_(f"Client exited with code {result.returncode}")
     else:
         ok("Client exited normally")
+
+
+def parse_launch_arg(argv):
+    for i, a in enumerate(argv):
+        if a.startswith("--launch="):
+            return [a]
+        if a == "--launch" and i + 1 < len(argv):
+            return [f"--launch={argv[i + 1]}"]
+    return []
 
 
 def main():
@@ -66,7 +76,7 @@ def main():
         duration = time.time() - start_time
         print(f"\n{C_BOLD}{C_GREEN}Build finished successfully in {duration:.2f}s !{C_RESET}\n")
 
-        run_client()
+        run_client(parse_launch_arg(sys.argv[1:]))
     except SystemExit as e:
         sys.exit(e.code)
     except Exception as e:

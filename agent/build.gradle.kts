@@ -1,3 +1,6 @@
+import java.awt.GraphicsEnvironment
+import javax.swing.JOptionPane
+
 plugins {
     id("java")
     id("com.gradleup.shadow") version "8.3.5"
@@ -113,3 +116,87 @@ tasks.register<Exec>("runLauncher") {
         }
     }
 }
+
+val testVersions = listOf(
+    "1.7.10", "1.8.9", "1.9.4", "1.10.2", "1.11.2", "1.12.2",
+    "1.13.2", "1.14.4", "1.15.2", "1.16.5", "1.17.1", "1.18.2",
+    "1.19.4", "1.20.1", "1.20.4", "1.21.1", "1.21.4", "1.21.11",
+)
+
+fun runPyCommand(vararg args: String): List<String> {
+    val python = if (isWindows) "python" else "python3"
+    return if (inFlatpak) {
+        listOf(
+            "flatpak-spawn", "--host",
+            "--directory=${launcherDir.absolutePath}",
+            "--env=PYTHONUNBUFFERED=1",
+            python, "-u"
+        ) + args
+    } else {
+        listOf(python, "-u") + args
+    }
+}
+
+fun pickVersionDialog(): String? {
+    if (GraphicsEnvironment.isHeadless()) return null
+    return JOptionPane.showInputDialog(
+        null,
+        "Version à lancer :",
+        "CeroClient - launchGame",
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        testVersions.toTypedArray(),
+        testVersions.first()
+    ) as String?
+}
+
+val mcVersionProp: String? = providers.gradleProperty("mcVersion").orNull
+
+fun registerLaunch(taskName: String, taskGroup: String, fixedVersion: String?) =
+    tasks.register<Exec>(taskName) {
+        group = taskGroup
+        description = if (fixedVersion != null)
+            "Lance Minecraft $fixedVersion avec l'agent CeroClient (sans UI)"
+        else
+            "Lance Minecraft avec l'agent CeroClient (sans UI). Version : menu ou -PmcVersion=<v>"
+
+        workingDir = launcherDir
+        isIgnoreExitValue = true
+        standardInput = System.`in`
+
+        doFirst {
+            val runPy = launcherDir.resolve("run.py")
+            if (!runPy.exists()) {
+                throw GradleException("run.py introuvable : ${runPy.absolutePath}")
+            }
+
+            val version = fixedVersion
+                ?: mcVersionProp
+                ?: pickVersionDialog()
+                ?: throw GradleException(
+                    "Aucune version choisie. Utilise -PmcVersion=<version>, " +
+                            "une tâche 'launch-<version>', ou active le menu (headless=false)."
+                )
+
+            if (version !in testVersions) {
+                logger.warn("⚠ '$version' n'est pas dans testVersions (lancement quand même)")
+            }
+
+            commandLine(runPyCommand("run.py", "--launch=$version"))
+            println("› Lancement de Minecraft $version via ${runPy.absolutePath}" +
+                    if (inFlatpak) "  [hôte via flatpak-spawn]" else "")
+        }
+
+        doLast {
+            val code = executionResult.get().exitValue
+            if (code != 0) {
+                throw GradleException(
+                    "Le lancement a échoué (code $code). Regarde la ligne '✗ ...' ou les logs juste au-dessus."
+                )
+            }
+        }
+    }
+
+registerLaunch("launchGame", "application", null)
+
+testVersions.forEach { v -> registerLaunch("launch-$v", "cero versions", v) }

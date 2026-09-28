@@ -10,6 +10,7 @@
 #include "../include/platform/single_instance.h"
 #include "../include/ui/ui.h"
 #include "../include/net/ca_bundle.h"
+#include "../include/launch/launch_minecraft.h"
 
 #include <curl/curl.h>
 #include <locale.h>
@@ -47,6 +48,16 @@ int main(int argc, char** argv) {
     if (!launcher_parse_args(argc, argv, &opts)) {
         curl_global_cleanup();
         return 1;
+    }
+
+    if (opts.launch_version) {
+        if (!launcher_init(&opts)) {
+            curl_global_cleanup();
+            return 1;
+        }
+        launch_minecraft(opts.launch_version, NULL, NULL);
+        curl_global_cleanup();
+        return 0;
     }
 
     if (single_instance_check()) {

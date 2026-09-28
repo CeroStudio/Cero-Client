@@ -3,6 +3,7 @@
 
 typedef struct {
     const char* assets_path;
+    const char* launch_version;
 } LauncherOptions;
 
 int launcher_parse_args(int argc, char** argv, LauncherOptions* opts);
@@ -17,4 +18,4 @@ void launcher_start_services(void);
 
 void launcher_shutdown(void);
 
-#endif 
+#endif
