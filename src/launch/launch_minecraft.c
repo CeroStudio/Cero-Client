@@ -163,6 +163,7 @@ void launch_minecraft(const char* version,
     lp.vanilla_version = vanilla_version;
     lp.bridge_port = local_bridge_port;
     lp.ram_mb = get_configured_ram_mb();
+    lp.macos_first_thread = (vm_get(root, "arguments") != NULL);
     lp.extra_jvm_args = NULL;
     lp.extra_jvm_count = 0;
     lp.extra_game_args = NULL;
@@ -207,9 +208,6 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
     char username[128];
     char uuid[64];
     char token[2048];
-    /* The Microsoft account is global to the whole launcher, not sandboxed
-     * per instance — only game files (versions/libs/assets/saves/mods)
-     * live under instance_dir. */
     if (!resolve_account(&ctx, client_path, username, sizeof(username),
                          uuid, sizeof(uuid), token, sizeof(token))) {
         return 0;
@@ -222,23 +220,12 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
         return 0;
     }
 
-    /* Never inject the Cero agent for user-created instances. */
     const int has_cero = 0;
     const char* cero_jar_path = "";
 
-    /* Deobfuscation (remapping the vanilla jar to Mojang's official
-     * names) exists only to let the closed-source Cero agent run against
-     * readable class/method names — it's unrelated to how loaders work.
-     * Fabric/Quilt remap at classload time themselves (intermediary
-     * mappings), and Forge/NeoForge's own install processors already
-     * produce whatever patched jar they need from the raw vanilla jar.
-     * Since instances never load the Cero agent, always use the plain
-     * vanilla jar here. */
     char mapped_jar[MAX_PATH_SIZE];
     mapped_jar[0] = '\0';
 
-    /* Java is resolved before the loader step: Forge needs it right away
-     * to run its install processors. */
     char java_exe[MAX_PATH_SIZE];
     if (!resolve_java_runtime(&ctx, instance_dir, mc_version, java_exe, sizeof(java_exe))) {
         return 0;
@@ -358,9 +345,6 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
     int libs_count = 0;
 
     if (loader_root) {
-        /* Reads "libraries": [{name,url?,downloads?}]; Forge and Fabric
-         * jsons need slightly different default-maven fallbacks, hence
-         * the two collectors (see collect_forge_libs' comment). */
         if (is_forge || is_neoforge) {
             collect_forge_libs(instance_dir, loader_root, libs_arr, &libs_count, 512);
         } else {
@@ -407,6 +391,7 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
     lp.vanilla_version = mc_version;
     lp.bridge_port = local_bridge_port;
     lp.ram_mb = (inst.ram_mb > 0) ? inst.ram_mb : get_configured_ram_mb();
+    lp.macos_first_thread = (vm_get(root, "arguments") != NULL);
     lp.extra_jvm_args = extra_jvm_n ? extra_jvm : NULL;
     lp.extra_jvm_count = extra_jvm_n;
     lp.extra_game_args = extra_game_n ? extra_game : NULL;

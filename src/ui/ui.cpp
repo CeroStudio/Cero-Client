@@ -452,10 +452,14 @@ void ui_drag_start(void* w) {
 #endif
 
 #ifdef __APPLE__
-extern "C" void ui_macos_register_scheme(void* w);
+extern "C" void ui_macos_prepare(void);
+extern "C" void ui_macos_post_create(void* w);
 #endif
 
 void* ui_create(const char* title) {
+#ifdef __APPLE__
+    ui_macos_prepare();
+#endif
     webview_t w = webview_create(0, nullptr);
     webview_set_title(w, title);
     webview_set_size(w, 1100, 600, WEBVIEW_HINT_NONE);
@@ -464,7 +468,7 @@ void* ui_create(const char* title) {
     WebKitWebContext *ctx = webkit_web_context_get_default();
     webkit_web_context_register_uri_scheme(ctx, "cero", ceroclient_uri_scheme_cb, NULL, NULL);
 #elif defined(__APPLE__)
-    ui_macos_register_scheme(w);
+    ui_macos_post_create(w);
 #elif defined(_WIN32)
     ui_register_scheme_win(w);
 #endif

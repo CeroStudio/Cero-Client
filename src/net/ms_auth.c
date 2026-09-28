@@ -425,7 +425,11 @@ static void open_browser(const char* url) {
 #else
     char cmd[2048];
     
+#ifdef __APPLE__
+    snprintf(cmd, sizeof(cmd), "open '%s' >/dev/null 2>&1 &", url);
+#else
     snprintf(cmd, sizeof(cmd), "xdg-open '%s' >/dev/null 2>&1 &", url);
+#endif
     int rc = system(cmd);
     (void)rc;
 #endif

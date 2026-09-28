@@ -30,9 +30,8 @@ typedef struct {
     int         bridge_port;
     long        ram_mb;
 
-    /* Extra loader-specific arguments (Forge's "--tweakClass ..." on
-     * legacy, or its "arguments.jvm"/"arguments.game" additions on
-     * modern versions). NULL/0 for vanilla and Fabric. */
+    int         macos_first_thread;
+
     const char* const* extra_jvm_args;
     int                extra_jvm_count;
     const char* const* extra_game_args;

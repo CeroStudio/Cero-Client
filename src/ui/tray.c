@@ -120,6 +120,8 @@ int tray_handle_message(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, LRESULT* out)
     return 0;
 }
 
+#elif defined(__APPLE__)
+
 #else
 
 #if !defined(HAVE_AYATANA) && !defined(HAVE_APPINDICATOR)

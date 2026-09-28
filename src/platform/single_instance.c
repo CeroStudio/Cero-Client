@@ -49,6 +49,9 @@ static char g_lock_path[512] = {0};
 
 static void build_lock_path(char* out, size_t sz) {
     const char* runtime = getenv("XDG_RUNTIME_DIR");
+#ifdef __APPLE__
+    if (!runtime || !*runtime) runtime = getenv("TMPDIR"); /* per-user on macOS */
+#endif
     if (!runtime || !*runtime) runtime = "/tmp";
     snprintf(out, sz, "%s/ceroclient.lock", runtime);
 }

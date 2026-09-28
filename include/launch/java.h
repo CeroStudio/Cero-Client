@@ -18,9 +18,13 @@
   #define JAVA_BIN     "bin\\java.exe"
 #elif defined(__APPLE__)
   #define JAVA_OS      "mac"
-  #define JAVA_ARCH    "x64"
+  #if defined(__aarch64__) || defined(__arm64__)
+    #define JAVA_ARCH  "aarch64"
+  #else
+    #define JAVA_ARCH  "x64"
+  #endif
   #define JAVA_EXT     ".tar.gz"
-  #define JAVA_BIN     "bin/java"
+  #define JAVA_BIN     "Contents/Home/bin/java"
 #elif defined(__FreeBSD__)
   #define JAVA_FREEBSD 1
   #define JAVA_BIN     "bin/java"
@@ -112,11 +116,12 @@ static inline int java_is_installed(const char* client_dir, int major) {
 }
 
 #ifndef JAVA_FREEBSD
-static inline int java_fetch_download_url(int major, char* url_out, size_t size) {
+static inline int java_query_download_link(int major, const char* arch,
+                                           char* url_out, size_t size) {
     char api_url[512];
     snprintf(api_url, sizeof(api_url),
         "https://api.adoptium.net/v3/assets/latest/%d/hotspot?os=%s&architecture=%s&image_type=jre",
-        major, JAVA_OS, JAVA_ARCH);
+        major, JAVA_OS, arch);
 
     char tmp_path[MAX_PATH_SIZE];
     snprintf(tmp_path, sizeof(tmp_path), "java_api_%d.json", major);
@@ -139,8 +144,16 @@ static inline int java_fetch_download_url(int major, char* url_out, size_t size)
         if (root) vm_free(root);
         remove(tmp_path);
     }
+    return got_link;
+}
 
-    if (got_link) return 1;
+static inline int java_fetch_download_url(int major, char* url_out, size_t size) {
+    if (java_query_download_link(major, JAVA_ARCH, url_out, size)) return 1;
+
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+    log_msg("warn", "No aarch64 JRE for Java %d, falling back to x64 (needs Rosetta 2)\n", major);
+    if (java_query_download_link(major, "x64", url_out, size)) return 1;
+#endif
 
     snprintf(url_out, size,
         "https://api.adoptium.net/v3/binary/latest/%d/ga/%s/%s/jre/hotspot/normal/eclipse",

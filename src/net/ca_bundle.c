@@ -23,6 +23,9 @@ static char g_ca_path[1024] = {0};
 
 static int resolve_path(void) {
     if (g_ca_path[0]) return 1;
+#ifdef __APPLE__
+    return 0;
+#endif
 
     char exe[1024];
 
@@ -52,6 +55,11 @@ const char* ca_bundle_path(void) {
 }
 
 int ca_bundle_ensure(void) {
+#ifdef __APPLE__
+    /* No /proc/self/exe on macOS; libcurl uses the system trust store when
+     * ca_bundle_path() is NULL, so there is nothing to download. */
+    return 1;
+#endif
     if (!resolve_path()) {
         log_msg("erreur", "Impossible de resoudre le chemin de l'executable\n");
         return 0;

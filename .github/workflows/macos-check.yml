@@ -1,0 +1,83 @@
+name: macOS check
+
+# Builds the macOS client and smoke-tests the UI on a hosted macOS runner.
+# Handy when no Mac is available locally: run it from the "Actions" tab
+# (workflow_dispatch) or push to any branch touching the paths below.
+# The smoke-test log and a screenshot are uploaded as an artifact.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/macos-check.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'assets/**'
+      - 'tools/**'
+      - 'agent/**'
+  pull_request:
+    paths:
+      - '.github/workflows/macos-check.yml'
+      - 'src/**'
+      - 'include/**'
+      - 'assets/**'
+      - 'tools/**'
+      - 'agent/**'
+
+jobs:
+  build-and-smoke-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Homebrew dependencies
+        run: |
+          brew install python@3.12 curl pkg-config git
+          brew link --force python@3.12
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'zulu'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build (strict)
+        run: |
+          pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt
+          python3 build.py
+
+      - name: Smoke test (start the launcher UI for 20 s)
+        # Informational: a hosted runner is not a real desktop, so a failure
+        # here is a hint to read the log, not necessarily a bug.
+        continue-on-error: true
+        run: |
+          set -u
+          ./bin/macos/client/CeroClient \
+            --customAssetsPath="$PWD/bin/assets/assets.dat" > smoke.log 2>&1 &
+          PID=$!
+          sleep 20
+          screencapture -x smoke.png || true
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "launcher still running after 20 s: OK"
+            kill "$PID" || true
+          else
+            echo "::error::launcher exited early"
+            cat smoke.log
+            exit 1
+          fi
+          echo "---- log ----"; cat smoke.log
+          grep -q "Scheme cero://" smoke.log \
+            || { echo "::error::cero:// scheme handler not registered"; exit 1; }
+          if grep -q "asset introuvable" smoke.log; then
+            echo "::error::some UI assets were not found"; exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-smoke-test
+          path: |
+            smoke.log
+            smoke.png
+          if-no-files-found: ignore

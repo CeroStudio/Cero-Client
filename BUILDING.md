@@ -216,6 +216,36 @@ client side**.
 > That said, the project notes macOS is "largely untested, due to a lack of
 > testers": the build works in CI, but quality support isn't guaranteed.
 
+### macOS implementation notes
+
+- **UI assets**: WKWebView only accepts a custom scheme handler on the
+  configuration used to create the view, and `webview` builds that internally.
+  `ui_macos.mm` therefore hooks `-[WKWebView initWithFrame:configuration:]`
+  (`ui_macos_prepare()`, called before `webview_create()`) to register
+  `cero://` and serve files from `assets.dat`.
+- **Menu bar**: `webview` creates no menu, so `ui_macos.mm` installs one
+  (Cmd+Q, Cmd+W hide, Cmd+M, Cut/Copy/Paste/Select All, ...).
+- **Tray**: an `NSStatusItem` in the menu bar (Show / Quit). The red window
+  button hides the window (like WM_CLOSE on Windows); clicking the Dock icon
+  shows it again.
+- **Java**: Adoptium's macOS archives extract to `Contents/Home/bin/java`;
+  on Apple Silicon the arm64 JRE is downloaded (x64/Rosetta only as a
+  fallback when no arm64 build exists for that Java major).
+- **`-XstartOnFirstThread`** is added for Minecraft 1.13+ (LWJGL 3 / GLFW).
+- Browser opening uses `open` instead of `xdg-open`.
+- The `macOS check` workflow builds on `macos-14`, starts the launcher for
+  20 seconds and uploads the log and a screenshot (`macos-smoke-test`
+  artifact). Run it from the Actions tab when no Mac is at hand.
+
+### Known limitations (macOS)
+
+- Minecraft **1.18 and older on Apple Silicon**: Mojang ships no arm64 LWJGL
+  natives for those versions, so they need an x64 JRE (Rosetta 2) plus x64
+  natives. Not implemented yet (needs a per-architecture runtime directory).
+- The client is distributed as a bare binary, not a `.app` bundle: no proper
+  Dock name/icon at launch and Gatekeeper will quarantine downloads until the
+  binary is signed and notarized (needs an Apple Developer ID).
+
 ```sh
 brew install python@3.12 curl pkg-config git nim
 brew install --cask temurin@17

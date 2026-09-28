@@ -72,6 +72,9 @@ static void open_url_no_shell(const char* url) {
     if (pid == 0) {
         pid_t pid2 = fork();
         if (pid2 == 0) {
+#ifdef __APPLE__
+            try_exec_opener("/usr/bin/open", url);
+#endif
             try_exec_opener("xdg-open", url);
             try_exec_opener("sensible-browser", url);
             try_exec_opener("x-www-browser", url);

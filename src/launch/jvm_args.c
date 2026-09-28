@@ -112,6 +112,10 @@ int build_launch_argv(const LaunchParams* p, const char** argv, int max_argv,
     argv[n++] = arg_client_brand;
     argv[n++] = arg_bridge_port;
 
+#ifdef __APPLE__
+    if (p->macos_first_thread) argv[n++] = "-XstartOnFirstThread";
+#endif
+
     for (int i = 0; i < p->extra_jvm_count; i++) argv[n++] = p->extra_jvm_args[i];
 
     argv[n++] = "-cp";
