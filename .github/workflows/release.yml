@@ -308,7 +308,7 @@ jobs:
             env IGNORE_OSVERSION=yes pkg update -f
             env IGNORE_OSVERSION=yes pkg install -y \
               python3 pkgconf webkit2-gtk_41 curl git openjdk8 \
-              gmake bzip2 rust gtk4 nim zip
+              gmake bzip2 rust gtk4 nim zip node
             printf "Name: bzip2\nDescription: bzip2\nVersion: 1.0.8\nLibs: -lbz2\n" \
               > /usr/local/libdata/pkgconfig/bzip2.pc
             ln -sf /usr/local/bin/pkg-config /usr/bin/pkg-config
@@ -332,6 +332,9 @@ jobs:
             fi
 
             nim --version || { echo "nim invocation failed"; exit 1; }
+
+            node --version || { echo "node invocation failed"; exit 1; }
+            npm --version || { echo "npm invocation failed"; exit 1; }
           run: |
             set -e
             export PATH="/usr/local/bin:/usr/bin:$PATH"
