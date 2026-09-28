@@ -2,9 +2,9 @@
     window.Cero = window.Cero || {};
     window.Cero.config = {
         apiBase: 'http://www.arcadiafr.fr:3134',
-        //apiBase: 'http://localhost:3134',
+        //apiBase: 'http://localhost:3134', // <-- this url is for test it in local like for developing
         wsUrl: 'ws://www.arcadiafr.fr:3134/ws'
-        //wsUrl: 'ws://localhost:3134/ws'
+        //wsUrl: 'ws://localhost:3134/ws' // <-- this url is for test it in local like for developing
     };
 })();
 
