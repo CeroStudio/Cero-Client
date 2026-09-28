@@ -6,6 +6,8 @@ import fr.cerostudio.api.mod.ModLoader;
 import fr.cerostudio.api.player.PlayerIdentity;
 import fr.cerostudio.api.service.ServiceRegistry;
 import fr.cerostudio.api.window.WindowApi;
+import fr.cerostudio.api.launch.LaunchInfo;
+import java.util.Map;
 
 public final class CeroApi {
 
@@ -59,6 +61,29 @@ public final class CeroApi {
 
     public static String minecraftVersion() {
         return capabilities().mcVersion();
+    }
+
+    private static volatile LaunchInfo launchInfo;
+
+    public static void captureLaunchArguments(String[] args) {
+        if (launchInfo != null) return;
+        launchInfo = LaunchInfo.capture(args);
+    }
+
+    public static String[] launchArguments() {
+        return require(launchInfo, "LaunchInfo").raw();
+    }
+
+    public static Map<String, String> getArguments() {
+        return require(launchInfo, "LaunchInfo").all();
+    }
+
+    public static String getArgument(String key) {
+        return require(launchInfo, "LaunchInfo").get(key);
+    }
+
+    public static LaunchInfo launch() {
+        return require(launchInfo, "LaunchInfo");
     }
 
     private static <T> T require(T value, String name) {

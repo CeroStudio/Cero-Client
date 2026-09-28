@@ -1,5 +1,6 @@
 package fr.cerostudio;
 
+import fr.cerostudio.api.CeroApi;
 import fr.cerostudio.api.player.PlayerIdentity;
 
 import java.io.File;
@@ -12,6 +13,7 @@ import java.util.regex.Pattern;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        CeroApi.captureLaunchArguments(args);
         String realMainClass = null;
         String mcVersion = "unknown";
         String username = null;
@@ -34,6 +36,12 @@ public class Main {
                 uuid = args[i + 1];
                 forwardedArgs.add(args[i]);
                 forwardedArgs.add(args[i + 1]);
+                i++;
+            } else if (args[i].startsWith("--launcher-port=")) {
+                // one token
+            } else if ("--launcher-port".equals(args[i]) && i + 1 < args.length) {
+                i++;
+            } else if ("--ceroPort".equals(args[i]) && i + 1 < args.length) {
                 i++;
             } else {
                 forwardedArgs.add(args[i]);

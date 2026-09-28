@@ -11,7 +11,7 @@ public final class CeroClientMod implements ClientModInitializer {
 
     private static final Logger LOGGER = Logger.getLogger("CeroClientMod");
 
-    private LauncherConnection launcherConnection;
+    private volatile LauncherConnection launcherConnection;
 
     @Override
     public void onInitializeClient() {
@@ -31,14 +31,35 @@ public final class CeroClientMod implements ClientModInitializer {
             return;
         }
 
-        launcherConnection = new LauncherConnection(port);
-        boolean success = launcherConnection.connect();
-
-        if (success) {
-            launcherConnection.send("HELLO;CeroClient;" + CeroApi.minecraftVersion());
-        } else {
+        final LauncherConnection connection = new LauncherConnection(port);
+        if (!connection.connect()) {
             LOGGER.warning("Échec de connexion au launcher sur le port " + port);
+            return;
         }
+
+        // Messages entrants du launcher (NOTIFY;..., PING;..., etc.)
+        connection.setMessageHandler(new LauncherConnection.MessageHandler() {
+            @Override
+            public void onMessage(String message) {
+                LOGGER.info("Message du launcher : " + message);
+                // TODO: dispatch selon le préfixe (notifications in-game, etc.)
+            }
+        });
+
+        // Fin de partie (exit normal, SIGTERM, crash non fatal) :
+        // on révèle la fenêtre du launcher AVANT de couper la socket.
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                connection.send("SHOW");
+                connection.disconnect();
+            }
+        }, "Cero-Bridge-Shutdown"));
+
+        connection.send("HELLO;CeroClient;" + CeroApi.minecraftVersion());
+
+        CeroApi.services().register(LauncherConnection.class, connection);
+        this.launcherConnection = connection;
     }
 
     public LauncherConnection getLauncherConnection() {

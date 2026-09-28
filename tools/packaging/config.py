@@ -20,6 +20,12 @@ FORCE_INCLUDE_PREFIXES = (
     "agent/",
 )
 
+NOTE_INTERDITE = (
+    "Ne jamais reactiver mangle.properties (regex ^_ ou autre) sans audit complet : "
+    "le renommage de proprietes a deja ecrase window.t (i18n) par l'ex-_onGameStart "
+    "-> bouton 'Fermer' a la place de 'Jouer' (incident 2026-09)."
+)
+
 ALLOWED_EXTENSIONS = {
     ".html", ".htm", ".css", ".js", ".json",
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
@@ -33,6 +39,11 @@ RESERVED_NAMES = [
     "launch_mc", "kill_game",
     "getMcToken", "getAccount", "getVersion", "setVersion",
     "loginMicrosoft", "checkAccount", "checkInternet",
+    "onLaunchProgress", "onLaunchError",
+    "_onGameStart", "_onGameStop",
+    "t", "setLanguage", "applyTranslations",
+    "save_settings", "get_settings",
+    "updatePlayButton", "myUuid", "ceroWS",
     "SkinViewer", "WalkingAnimation",
     "VISUEL", "VERSIONS", "AMIS", "CHARGEMENT", "Jouer", "serveur",
 ]
@@ -57,7 +68,7 @@ JS_CALL_RE      = re.compile(r'(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(')
 HTML_HANDLER_RE = re.compile(r'\bon[a-z]+\s*=\s*["\']([^"\']+)["\']', re.IGNORECASE)
 
 JS_IMPORT_REGEX = re.compile(
-    r'''(?:import\s+(?:[\w${},*\s]+\s+from\s+)?['"]([^'"]+)['"])
+    r'''(?:import\s+(?:[\w${},\s]+\s+from\s+)?['"]([^'"]+)['"])
       | (?:import\s*\(\s*['"]([^'"]+)['"]\s*\))
       | (?:export\s+(?:\*|\{[^}]*\})\s+from\s+['"]([^'"]+)['"])
       | (?:require\s*\(\s*['"]([^'"]+)['"]\s*\))

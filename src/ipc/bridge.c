@@ -21,6 +21,116 @@
 
 int local_bridge_port = 0;
 
+#define BRIDGE_LINE_MAX 512
+
+static int g_game_fd = -1;
+
+#ifdef _WIN32
+static CRITICAL_SECTION g_game_lock;
+static int g_game_lock_init = 0;
+#else
+static pthread_mutex_t g_game_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
+static void bridge_game_lock(void) {
+#ifdef _WIN32
+    if (g_game_lock_init) EnterCriticalSection(&g_game_lock);
+#else
+    pthread_mutex_lock(&g_game_lock);
+#endif
+}
+
+static void bridge_game_unlock(void) {
+#ifdef _WIN32
+    if (g_game_lock_init) LeaveCriticalSection(&g_game_lock);
+#else
+    pthread_mutex_unlock(&g_game_lock);
+#endif
+}
+
+void bridge_send_to_game(const char* message) {
+    if (message == NULL) return;
+
+    bridge_game_lock();
+    int fd = g_game_fd;
+    bridge_game_unlock();
+
+    if (fd < 0) {
+        log_msg("debug", "[Bridge] Aucun jeu connecté, message ignoré : %s\n", message);
+        return;
+    }
+
+    size_t len = strlen(message);
+    const char nl = '\n';
+    size_t sent = 0;
+    while (sent < len) {
+#ifdef _WIN32
+        int w = send(fd, message + sent, (int)(len - sent), 0);
+#else
+        ssize_t w = send(fd, message + sent, len - sent, 0);
+#endif
+        if (w <= 0) {
+            log_msg("warn", "[Bridge] Envoi vers le jeu échoué\n");
+            return;
+        }
+        sent += (size_t)w;
+    }
+#ifdef _WIN32
+    send(fd, &nl, 1, 0);
+#else
+    (void)send(fd, &nl, 1, 0);
+#endif
+}
+
+static void bridge_handle_line(const char* line) {
+    if (line == NULL || line[0] == '\0') return;
+
+    log_msg("debug", "[Bridge] <- jeu : %s\n", line);
+
+    if (strncmp(line, "SHOW", 4) == 0 && (line[4] == '\0' || line[4] == ';')) {
+        show_main_window();
+    } else if (strncmp(line, "HELLO;", 6) == 0) {
+        log_msg("info", "[Bridge] Jeu connecté : %s\n", line + 6);
+    } else {
+        log_msg("warn", "[Bridge] Message inconnu : %s\n", line);
+    }
+}
+
+static void bridge_handle_client(int client_fd) {
+    char recv_buf[512];
+    char line[BRIDGE_LINE_MAX];
+    size_t line_len = 0;
+
+    bridge_game_lock();
+    g_game_fd = client_fd;
+    bridge_game_unlock();
+
+    for (;;) {
+#ifdef _WIN32
+        int n = recv(client_fd, recv_buf, (int)sizeof(recv_buf), 0);
+#else
+        ssize_t n = recv(client_fd, recv_buf, sizeof(recv_buf), 0);
+#endif
+        if (n <= 0) break;
+
+        for (ssize_t i = 0; i < n; i++) {
+            char ch = recv_buf[i];
+            if (ch == '\r') continue;
+            if (ch == '\n') {
+                line[line_len] = '\0';
+                if (line_len > 0) bridge_handle_line(line);
+                line_len = 0;
+            } else if (line_len < sizeof(line) - 1) {
+                line[line_len++] = ch;
+            }
+        }
+    }
+
+    bridge_game_lock();
+    if (g_game_fd == client_fd) g_game_fd = -1;
+    bridge_game_unlock();
+}
+
 #ifdef _WIN32
 static DWORD WINAPI bridge_thread(LPVOID arg) {
     (void)arg;
@@ -30,7 +140,8 @@ static DWORD WINAPI bridge_thread(LPVOID arg) {
     SOCKET server_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server_fd == INVALID_SOCKET) return 1;
 
-    struct sockaddr_in addr = {0};
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_LOOPBACK;
     addr.sin_port = htons(0);
@@ -38,7 +149,7 @@ static DWORD WINAPI bridge_thread(LPVOID arg) {
     bind(server_fd, (struct sockaddr*)&addr, sizeof(addr));
     listen(server_fd, 1);
 
-    int len = sizeof(addr);
+    int len = (int)sizeof(addr);
     getsockname(server_fd, (struct sockaddr*)&addr, &len);
     local_bridge_port = ntohs(addr.sin_port);
 
@@ -48,22 +159,17 @@ static DWORD WINAPI bridge_thread(LPVOID arg) {
         SOCKET client_fd = accept(server_fd, NULL, NULL);
         if (client_fd == INVALID_SOCKET) continue;
 
-        char buf[256] = {0};
-        int n = recv(client_fd, buf, sizeof(buf) - 1, 0);
-        if (n > 0) {
-            buf[n] = '\0';
-            log_msg("debug", "Message recu du Java : %s\n", buf);
-            if (strncmp(buf, "SHOW", 4) == 0) {
-                show_main_window();
-            }
-        }
-
+        log_msg("info", "[Bridge] Session de jeu ouverte\n");
+        bridge_handle_client((int)client_fd);
         closesocket(client_fd);
+        log_msg("info", "[Bridge] Session de jeu fermée\n");
     }
     return 0;
 }
 
 void bridge_start(void) {
+    InitializeCriticalSection(&g_game_lock);
+    g_game_lock_init = 1;
     CreateThread(NULL, 0, bridge_thread, NULL, 0, NULL);
     Sleep(100);
 }
@@ -75,7 +181,8 @@ static void* bridge_thread(void* arg) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) return NULL;
 
-    struct sockaddr_in addr = {0};
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_LOOPBACK;
     addr.sin_port = htons(0);
@@ -93,17 +200,10 @@ static void* bridge_thread(void* arg) {
         int client_fd = accept(server_fd, NULL, NULL);
         if (client_fd < 0) continue;
 
-        char buf[256] = {0};
-        ssize_t n = recv(client_fd, buf, sizeof(buf) - 1, 0);
-        if (n > 0) {
-            buf[n] = '\0';
-            log_msg("debug", "Message reçu du Java : %s\n", buf);
-            if (strncmp(buf, "SHOW", 4) == 0) {
-                show_main_window();
-            }
-        }
-
+        log_msg("info", "[Bridge] Session de jeu ouverte\n");
+        bridge_handle_client(client_fd);
         close(client_fd);
+        log_msg("info", "[Bridge] Session de jeu fermée\n");
     }
     return NULL;
 }

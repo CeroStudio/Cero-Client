@@ -10,6 +10,7 @@ on:
       - 'assets/**'
       - 'installer/**'
       - 'bootstrapper/**'
+      - 'agent/**'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -19,6 +20,7 @@ on:
       - 'assets/**'
       - 'installer/**'
       - 'bootstrapper/**'
+      - 'agent/**'
 
 permissions:
   contents: write

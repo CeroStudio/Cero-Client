@@ -3,4 +3,6 @@
 
 void bridge_start(void);
 
-#endif 
+void bridge_send_to_game(const char* message);
+
+#endif

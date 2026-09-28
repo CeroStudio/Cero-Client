@@ -59,6 +59,10 @@ int build_launch_argv(const LaunchParams* p, const char** argv, int max_argv,
     snprintf(arg_client_brand, sizeof(arg_client_brand),
              "-Dminecraft.client.brand=%s", CLIENT_BRAND);
 
+    static char arg_bridge_port[48];
+    snprintf(arg_bridge_port, sizeof(arg_bridge_port),
+             "-Dceroclient.launcher.port=%d", p->bridge_port);
+
     static char asset_index_buf[64];
     snprintf(asset_index_buf, sizeof(asset_index_buf), "%s", p->asset_index);
 
@@ -139,8 +143,7 @@ int build_launch_argv(const LaunchParams* p, const char** argv, int max_argv,
 
     for (int i = 0; i < p->extra_game_count; i++) argv[n++] = p->extra_game_args[i];
 
-    argv[n++] = "--ceroPort";
-    argv[n++] = bridge_port_buf;
+    argv[n++] = arg_bridge_port;
 
     argv[n] = NULL;
     return n;
