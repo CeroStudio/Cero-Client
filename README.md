@@ -38,7 +38,7 @@
 ## Features & Tasks
 
 - [ ] **Instances**
-	- [ ] Install a loader (e.g., Forge, Fabric, etc.)
+	- [x] Install a loader (e.g., Forge, Fabric, etc.)
 	- [ ] Save and manage instances
 - [x] **Play Minecraft**
 	- [x] Download Manifest
@@ -47,10 +47,12 @@
 	- [x] Download Client
 	- [x] Download Assets
 	- [x] Start Client
-	- [ ] Install Fabric
-	- [ ] Install Forge
-	- [ ] Start Fabric
+	- [x] Install Fabric
+	- [x] Install Forge
+    - [x] Install Quilt
+	- [x] Start Fabric
 	- [ ] Start Forge
+    - [x] Start Quilt
 - [x] **Connect Microsoft Account**
 - [x] Create an Installer
 - [x] Create an Updater
@@ -60,7 +62,7 @@
     - [ ] Invite in his world
     - [x] Add Friend
     - [x] Remove Friend
-- [ ] Add Android Support
+- [ ] Add Android Support `Very hard! (for me)`
 - [x] Multi Language Support
 
 ---
