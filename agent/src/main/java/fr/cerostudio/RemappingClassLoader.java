@@ -36,6 +36,8 @@ public class RemappingClassLoader extends URLClassLoader {
 
         MixinBootstrap.init();
 
+        Mixins.addConfiguration("mixins.cero.json");
+
         String mixinConfig = resolveMixinConfig(capabilities);
         Mixins.addConfiguration(mixinConfig);
 
