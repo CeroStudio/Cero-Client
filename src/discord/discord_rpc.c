@@ -8,12 +8,19 @@
 #ifdef _WIN32
   #include <windows.h>
   static HANDLE g_pipe = INVALID_HANDLE_VALUE;
+  static SRWLOCK g_rpc_lock = SRWLOCK_INIT;
+  #define RPC_LOCK()   AcquireSRWLockExclusive(&g_rpc_lock)
+  #define RPC_UNLOCK() ReleaseSRWLockExclusive(&g_rpc_lock)
   #define RPC_VALID() (g_pipe != INVALID_HANDLE_VALUE)
 #else
   #include <unistd.h>
+  #include <pthread.h>
   #include <sys/socket.h>
   #include <sys/un.h>
   static int g_sock = -1;
+  static pthread_mutex_t g_rpc_lock = PTHREAD_MUTEX_INITIALIZER;
+  #define RPC_LOCK()   pthread_mutex_lock(&g_rpc_lock)
+  #define RPC_UNLOCK() pthread_mutex_unlock(&g_rpc_lock)
   #define RPC_VALID() (g_sock >= 0)
 #endif
 
@@ -163,6 +170,8 @@ void discord_rpc_update(const char* state, const char* details,
                         int64_t start_timestamp) {
     if (!RPC_VALID()) return;
 
+    RPC_LOCK();
+
     char payload[2048];
     char buf_state[256]   = "";
     char buf_details[256] = "";
@@ -224,16 +233,23 @@ void discord_rpc_update(const char* state, const char* details,
     } else {
         log_msg("error", "[RPC] Activity send failed\n");
     }
+
+    RPC_UNLOCK();
 }
 
 void discord_rpc_clear(void) {
     if (!RPC_VALID()) return;
+
+    RPC_LOCK();
+
     char payload[128];
     snprintf(payload, sizeof(payload),
         "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":%d},\"nonce\":\"1\"}", g_pid);
     rpc_send(1, payload);
     rpc_read_response();
     log_msg("info", "[RPC] Activity cleared\n");
+
+    RPC_UNLOCK();
 }
 
 void discord_rpc_shutdown(void) {

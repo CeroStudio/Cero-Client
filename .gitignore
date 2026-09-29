@@ -10,7 +10,7 @@ agent/gradle
 game/
 keys/
 android/
-tests/
+tests/out/
 third_party/
 bak/
 node_modules/

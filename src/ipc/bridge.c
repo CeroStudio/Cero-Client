@@ -17,7 +17,10 @@
 #include "../../include/launch/launch_minecraft.h"
 #include "../../include/ipc/window_handlers.h"
 #include "../../include/core/logger.h"
+#include "../../include/discord/discord_rpc.h"
 #include <string.h>
+#include <stdlib.h>
+#include <time.h>
 
 int local_bridge_port = 0;
 
@@ -82,6 +85,47 @@ void bridge_send_to_game(const char* message) {
 #endif
 }
 
+static void bridge_handle_discord(const char* payload) {
+    char buf[BRIDGE_LINE_MAX];
+    strncpy(buf, payload, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+
+    char* details = buf;
+    char* state = NULL;
+    char* ts_str = NULL;
+
+    char* sep = strchr(buf, ';');
+    if (sep) {
+        *sep = '\0';
+        state = sep + 1;
+        char* sep2 = strchr(state, ';');
+        if (sep2) {
+            *sep2 = '\0';
+            ts_str = sep2 + 1;
+        }
+    }
+
+    if (details[0] == '\0') {
+        log_msg("warn", "[Bridge] DISCORD sans details, ignore\n");
+        return;
+    }
+
+    int64_t ts = (int64_t)time(NULL);
+    if (ts_str != NULL) {
+        char* end = NULL;
+        long long parsed = strtoll(ts_str, &end, 10);
+        if (end == ts_str || *end != '\0') {
+            log_msg("warn", "[Bridge] Timestamp Discord invalide : %s\n", ts_str);
+            return;
+        }
+        ts = (int64_t)parsed;
+    }
+
+    if (state != NULL && state[0] == '\0') state = NULL;
+
+    discord_rpc_update(state, details, "logo", "CeroClient", NULL, NULL, ts);
+}
+
 static void bridge_handle_line(const char* line) {
     if (line == NULL || line[0] == '\0') return;
 
@@ -89,6 +133,10 @@ static void bridge_handle_line(const char* line) {
 
     if (strncmp(line, "SHOW", 4) == 0 && (line[4] == '\0' || line[4] == ';')) {
         show_main_window();
+    } else if (strncmp(line, "DISCORD_CLEAR", 13) == 0 && line[13] == '\0') {
+        discord_rpc_clear();
+    } else if (strncmp(line, "DISCORD;", 8) == 0) {
+        bridge_handle_discord(line + 8);
     } else if (strncmp(line, "HELLO;", 6) == 0) {
         log_msg("info", "[Bridge] Jeu connecté : %s\n", line + 6);
     } else {
@@ -124,6 +172,11 @@ static void bridge_handle_client(int client_fd) {
                 line[line_len++] = ch;
             }
         }
+    }
+
+    if (line_len > 0) {
+        line[line_len] = '\0';
+        bridge_handle_line(line);
     }
 
     bridge_game_lock();

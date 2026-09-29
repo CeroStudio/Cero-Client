@@ -192,9 +192,25 @@ static inline int java_extract_zip(const char* zip_path, const char* out_dir) {
 }
 #endif
 
+static inline int java_round_up_to_lts(int major) {
+    static const int lts[] = {8, 11, 17, 21, 25};
+    for (size_t i = 0; i < sizeof(lts)/sizeof(lts[0]); i++) {
+        if (lts[i] >= major) return lts[i];
+    }
+    return major;
+}
+
 static inline int java_ensure(const char* client_dir, const char* version_id) {
-    int major = java_get_required_version(client_dir, version_id);
-    log_msg("info", "Minecraft %s requires Java %d\n", version_id, major);
+    int required_major = java_get_required_version(client_dir, version_id);
+    int major = java_round_up_to_lts(required_major);
+    if (major != required_major) {
+        log_msg("info",
+            "Minecraft %s requires Java %d (non-LTS, indisponible sur Adoptium) "
+            "-> utilisation de Java %d (LTS)\n",
+            version_id, required_major, major);
+    } else {
+        log_msg("info", "Minecraft %s requires Java %d\n", version_id, major);
+    }
 
 #ifdef JAVA_FREEBSD
     char sys_java[MAX_PATH_SIZE];
