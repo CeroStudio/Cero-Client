@@ -59,6 +59,27 @@ static inline int java_get_required_version(const char* client_dir, const char* 
     return major;
 }
 
+static inline void java_get_required_component(const char* client_dir, const char* version_id,
+                                               char* out, size_t size) {
+    char path[MAX_PATH_SIZE];
+    snprintf(path, sizeof(path), "%s/versions/%s/%s.json",
+            client_dir, version_id, version_id);
+
+    snprintf(out, size, "jre-legacy");
+
+    VmJVal* root = vm_load_json(path);
+    if (!root) return;
+
+    VmJVal* jv = vm_get(root, "javaVersion");
+    if (jv) {
+        const char* component = vm_gets(jv, "component");
+        if (component && component[0]) {
+            snprintf(out, size, "%s", component);
+        }
+    }
+    vm_free(root);
+}
+
 static inline void java_get_install_dir(const char* client_dir, int major, char* out, size_t size) {
     snprintf(out, size, "%s/runtime/java%d", client_dir, major);
 }
@@ -116,49 +137,125 @@ static inline int java_is_installed(const char* client_dir, int major) {
 }
 
 #ifndef JAVA_FREEBSD
-static inline int java_query_download_link(int major, const char* arch,
-                                           char* url_out, size_t size) {
-    char api_url[512];
-    snprintf(api_url, sizeof(api_url),
-        "https://api.adoptium.net/v3/assets/latest/%d/hotspot?os=%s&architecture=%s&image_type=jre",
-        major, JAVA_OS, arch);
 
-    char tmp_path[MAX_PATH_SIZE];
-    snprintf(tmp_path, sizeof(tmp_path), "java_api_%d.json", major);
+#define MOJANG_JAVA_RUNTIME_MANIFEST_URL \
+    "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
 
-    download_file(api_url, tmp_path);
-
-    int got_link = 0;
-    if (java_file_exists(tmp_path)) {
-        VmJVal* root = vm_load_json(tmp_path);
-        if (root && root->t == VM_JARR && root->a.count > 0) {
-            VmJVal* first = root->a.items[0];
-            VmJVal* binary = vm_get(first, "binary");
-            VmJVal* package = binary ? vm_get(binary, "package") : NULL;
-            const char* link = package ? vm_gets(package, "link") : NULL;
-            if (link) {
-                snprintf(url_out, size, "%s", link);
-                got_link = 1;
-            }
-        }
-        if (root) vm_free(root);
-        remove(tmp_path);
-    }
-    return got_link;
+static inline const char* java_mojang_os_key(void) {
+#if defined(_WIN32)
+    return "windows-x64";
+#elif defined(__APPLE__)
+  #if defined(__aarch64__) || defined(__arm64__)
+    return "mac-os-arm64";
+  #else
+    return "mac-os";
+  #endif
+#else
+    return "linux";
+#endif
 }
 
-static inline int java_fetch_download_url(int major, char* url_out, size_t size) {
-    if (java_query_download_link(major, JAVA_ARCH, url_out, size)) return 1;
+static inline int java_resolve_mojang_manifest_url(const char* component,
+                                                   char* url_out, size_t size) {
+    char tmp_path[] = "java_runtime_manifest.json";
 
-#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-    log_msg("warn", "No aarch64 JRE for Java %d, falling back to x64 (needs Rosetta 2)\n", major);
-    if (java_query_download_link(major, "x64", url_out, size)) return 1;
+    download_file(MOJANG_JAVA_RUNTIME_MANIFEST_URL, tmp_path);
+    if (!java_file_exists(tmp_path)) return 0;
+
+    VmJVal* root = vm_load_json(tmp_path);
+    remove(tmp_path);
+    if (!root) return 0;
+
+    int ok = 0;
+    VmJVal* os_section = vm_get(root, java_mojang_os_key());
+    if (os_section) {
+        VmJVal* comp_arr = vm_get(os_section, component);
+        if (comp_arr && comp_arr->t == VM_JARR && comp_arr->a.count > 0) {
+            VmJVal* first = comp_arr->a.items[0];
+            VmJVal* manifest = vm_get(first, "manifest");
+            const char* murl = manifest ? vm_gets(manifest, "url") : NULL;
+            if (murl) {
+                snprintf(url_out, size, "%s", murl);
+                ok = 1;
+            }
+        }
+    }
+    vm_free(root);
+    return ok;
+}
+
+static inline void java_mkdirs_rel(const char* out_dir, const char* rel_dir) {
+    char full[MAX_PATH_SIZE];
+    snprintf(full, sizeof(full), "%s/%s", out_dir, rel_dir);
+    ensure_directory_exists(full);
+}
+
+static inline void java_chmod_exec(const char* path) {
+#if !defined(_WIN32)
+    char cmd[MAX_PATH_SIZE + 16];
+    snprintf(cmd, sizeof(cmd), "chmod +x \"%s\"", path);
+    system(cmd);
+#else
+    (void)path;
 #endif
+}
 
-    snprintf(url_out, size,
-        "https://api.adoptium.net/v3/binary/latest/%d/ga/%s/%s/jre/hotspot/normal/eclipse",
-        major, JAVA_OS, JAVA_ARCH);
-    return 1;
+static inline int java_download_mojang_runtime(const char* manifest_url,
+                                               const char* install_dir) {
+    char tmp_path[] = "java_files_manifest.json";
+    download_file(manifest_url, tmp_path);
+    if (!java_file_exists(tmp_path)) return 0;
+
+    VmJVal* root = vm_load_json(tmp_path);
+    remove(tmp_path);
+    if (!root) return 0;
+
+    VmJVal* files = vm_get(root, "files");
+    if (!files || files->t != VM_JOBJ) {
+        vm_free(root);
+        return 0;
+    }
+
+    size_t downloaded = 0;
+    for (size_t i = 0; i < files->o.count; i++) {
+        const char* rel_path = files->o.pairs[i].k;
+        VmJVal* entry = files->o.pairs[i].v;
+        const char* type = vm_gets(entry, "type");
+        if (!type) continue;
+
+        if (strcmp(type, "directory") == 0) {
+            java_mkdirs_rel(install_dir, rel_path);
+            continue;
+        }
+        if (strcmp(type, "file") != 0) {
+            continue;
+        }
+
+        VmJVal* downloads = vm_get(entry, "downloads");
+        VmJVal* raw = downloads ? vm_get(downloads, "raw") : NULL;
+        const char* file_url = raw ? vm_gets(raw, "url") : NULL;
+        if (!file_url) continue;
+
+        char out_path[MAX_PATH_SIZE];
+        snprintf(out_path, sizeof(out_path), "%s/%s", install_dir, rel_path);
+        ensure_parent_dirs(out_path);
+
+        download_file(file_url, out_path);
+        if (!java_file_exists(out_path)) {
+            log_msg("warn", "Fichier JRE manquant apres telechargement: %s\n", rel_path);
+            continue;
+        }
+
+        double executable = 0;
+        VmJVal* exec_val = vm_get(entry, "executable");
+        if (exec_val && exec_val->t == VM_JBOOL) executable = exec_val->b;
+        if (executable) java_chmod_exec(out_path);
+
+        downloaded++;
+    }
+
+    vm_free(root);
+    return downloaded > 0;
 }
 
 static inline int java_extract_zip(const char* zip_path, const char* out_dir) {
@@ -192,25 +289,9 @@ static inline int java_extract_zip(const char* zip_path, const char* out_dir) {
 }
 #endif
 
-static inline int java_round_up_to_lts(int major) {
-    static const int lts[] = {8, 11, 17, 21, 25};
-    for (size_t i = 0; i < sizeof(lts)/sizeof(lts[0]); i++) {
-        if (lts[i] >= major) return lts[i];
-    }
-    return major;
-}
-
 static inline int java_ensure(const char* client_dir, const char* version_id) {
-    int required_major = java_get_required_version(client_dir, version_id);
-    int major = java_round_up_to_lts(required_major);
-    if (major != required_major) {
-        log_msg("info",
-            "Minecraft %s requires Java %d (non-LTS, indisponible sur Adoptium) "
-            "-> utilisation de Java %d (LTS)\n",
-            version_id, required_major, major);
-    } else {
-        log_msg("info", "Minecraft %s requires Java %d\n", version_id, major);
-    }
+    int major = java_get_required_version(client_dir, version_id);
+    log_msg("info", "Minecraft %s requires Java %d\n", version_id, major);
 
 #ifdef JAVA_FREEBSD
     char sys_java[MAX_PATH_SIZE];
@@ -228,22 +309,17 @@ static inline int java_ensure(const char* client_dir, const char* version_id) {
         return 1;
     }
 
-    log_msg("info", "Downloading Java %d (%s)...\n", major, JAVA_OS);
+    char component[64];
+    java_get_required_component(client_dir, version_id, component, sizeof(component));
 
-    char url[1024];
-    if (!java_fetch_download_url(major, url, sizeof(url))) {
-        log_msg("error", "Cannot get download URL for Java %d\n", major);
-        return 0;
-    }
+    log_msg("info", "Downloading Java %d (%s, composant Mojang '%s')...\n",
+            major, JAVA_OS, component);
 
-    char archive_path[MAX_PATH_SIZE];
-    snprintf(archive_path, sizeof(archive_path),
-             "%s/runtime/java%d_download%s", client_dir, major, JAVA_EXT);
-    ensure_parent_dirs(archive_path);
-
-    download_file(url, archive_path);
-    if (!java_file_exists(archive_path)) {
-        log_msg("error", "Failed to download Java %d\n", major);
+    char files_manifest_url[512];
+    if (!java_resolve_mojang_manifest_url(component, files_manifest_url, sizeof(files_manifest_url))) {
+        log_msg("error",
+            "Aucun runtime Mojang '%s' disponible pour cet OS/architecture (Java %d)\n",
+            component, major);
         return 0;
     }
 
@@ -251,13 +327,11 @@ static inline int java_ensure(const char* client_dir, const char* version_id) {
     java_get_install_dir(client_dir, major, install_dir, sizeof(install_dir));
     ensure_directory_exists(install_dir);
 
-    log_msg("info", "Extracting Java %d...\n", major);
-    if (!java_extract_zip(archive_path, install_dir)) {
-        log_msg("error", "Failed to extract Java %d\n", major);
+    log_msg("info", "Telechargement du runtime Java %d (fichier par fichier)...\n", major);
+    if (!java_download_mojang_runtime(files_manifest_url, install_dir)) {
+        log_msg("error", "Echec du telechargement du runtime Java %d\n", major);
         return 0;
     }
-
-    remove(archive_path);
 
     if (!java_is_installed(client_dir, major)) {
         log_msg("error", "Java %d install failed (executable not found)\n", major);
