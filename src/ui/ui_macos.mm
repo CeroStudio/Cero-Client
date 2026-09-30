@@ -124,6 +124,7 @@ static tray_quit_cb  g_tray_on_quit  = NULL;
 }
 - (void)showWindow:(id)sender {
     (void)sender;
+    if ([NSApp isHidden]) [NSApp unhide:nil];
     if (g_tray_on_show) g_tray_on_show(); else show_main_window();
 }
 - (void)hideWindow:(id)sender {
