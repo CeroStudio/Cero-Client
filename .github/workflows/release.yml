@@ -11,6 +11,7 @@ on:
       - 'installer/**'
       - 'bootstrapper/**'
       - 'agent/**'
+      - 'tools/'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -21,6 +22,7 @@ on:
       - 'installer/**'
       - 'bootstrapper/**'
       - 'agent/**'
+      - 'tools/'
 
 permissions:
   contents: write
