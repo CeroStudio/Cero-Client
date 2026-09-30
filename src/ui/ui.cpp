@@ -36,17 +36,17 @@ extern "C" {
     #include "../../include/app/assets_loader.h"
 }
 
-#if defined(__linux__) || defined(__BSD__)
-  #include <gtk/gtk.h>
-  #include <gio/gio.h>
-  #include <webkit2/webkit2.h>
-#endif
-
 #if defined(_WIN32)
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || \
       defined(__NetBSD__)   || defined(__DragonFly__)
   #define __BSD__ 1
 #elif defined(__linux__)
+#endif
+
+#if defined(__linux__) || defined(__BSD__)
+  #include <gtk/gtk.h>
+  #include <gio/gio.h>
+  #include <webkit2/webkit2.h>
 #endif
 
 #if defined(__linux__) || defined(__BSD__)
