@@ -247,6 +247,22 @@ def bundle_windows_dlls(webview2_lib, curl_linked_statically):
     else:
         fail_(f"WebView2Loader.dll introuvable dans {webview2_lib}")
 
+    mingw_bin_candidates = [
+        "C:/msys64/mingw64/bin",
+        "/mingw64/bin",
+    ]
+    mingw_bin = next((p for p in mingw_bin_candidates if os.path.isdir(p)), None)
+    if mingw_bin:
+        winpthread_src = os.path.join(mingw_bin, "libwinpthread-1.dll")
+        if os.path.exists(winpthread_src):
+            shutil.copy2(winpthread_src, dest_dir / "libwinpthread-1.dll")
+            copied.append("libwinpthread-1.dll")
+        else:
+            info("libwinpthread-1.dll introuvable dans le dossier bin MSYS2/mingw64.")
+    else:
+        info("Dossier bin MSYS2/mingw64 introuvable - libwinpthread-1.dll ne sera pas embarquée "
+             "(l'exe ne démarrera pas sans elle).")
+
     if not curl_linked_statically:
         mingw_bin_candidates = [
             "C:/msys64/mingw64/bin",
@@ -264,7 +280,7 @@ def bundle_windows_dlls(webview2_lib, curl_linked_statically):
                 "libngtcp2-16.dll", "libngtcp2_crypto_libressl-0.dll",
                 "zlib1.dll", "libzstd-1.dll", "libbrotlidec.dll", "libbrotlicommon.dll",
                 "libpsl-5.dll", "libidn2-0.dll", "libintl-8.dll", "libiconv-2.dll",
-                "libunistring-5.dll","libngtcp2_crypto_ossl-0.dll", "libwinpthread-1.dll", "libzstd.dll",
+                "libunistring-5.dll","libngtcp2_crypto_ossl-0.dll", "libzstd.dll",
             ]
             for name in runtime_dlls:
                 src = os.path.join(mingw_bin, name)
