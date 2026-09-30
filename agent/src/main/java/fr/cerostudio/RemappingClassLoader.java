@@ -12,9 +12,7 @@ import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Mixins;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.service.MixinService;
-import fr.cerostudio.core.CeroClientMod;
 import fr.cerostudio.remap.AccessWidener;
-import fr.cerostudio.service.CeroMixinService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
