@@ -546,6 +546,49 @@ int forge_extract_extra_args(VmJVal* version_json, const char* kind,
     return n;
 }
 
+void forge_resolve_placeholder(const char* client_dir, const char* classpath,
+                               const char* natives_dir, const char* version_name,
+                               const char* raw, char* out, size_t outsz) {
+    static char library_dir[MAX_PATH_SIZE];
+    snprintf(library_dir, sizeof(library_dir), "%s/libraries", client_dir);
+
+    size_t oi = 0;
+    const char* p = raw;
+    while (*p && oi + 1 < outsz) {
+        if (p[0] == '$' && p[1] == '{') {
+            const char* end = strchr(p + 2, '}');
+            if (end) {
+                size_t tok_len = (size_t)(end - (p + 2));
+                const char* value = NULL;
+
+                #define TOKEN_IS(lit) \
+                    (tok_len == strlen(lit) && strncmp(p + 2, lit, tok_len) == 0)
+
+                if (TOKEN_IS("classpath"))                value = classpath;
+                else if (TOKEN_IS("classpath_separator"))  value = CP_SEP;
+                else if (TOKEN_IS("library_directory"))    value = library_dir;
+                else if (TOKEN_IS("natives_directory"))    value = natives_dir;
+                else if (TOKEN_IS("version_name"))         value = version_name;
+                else if (TOKEN_IS("launcher_name"))        value = "CeroClient";
+                else if (TOKEN_IS("launcher_version"))     value = "1.0";
+
+                #undef TOKEN_IS
+
+                if (value) {
+                    size_t vlen = strlen(value);
+                    if (vlen > outsz - oi - 1) vlen = outsz - oi - 1;
+                    memcpy(out + oi, value, vlen);
+                    oi += vlen;
+                    p = end + 1;
+                    continue;
+                }
+            }
+        }
+        out[oi++] = *p++;
+    }
+    out[oi] = '\0';
+}
+
 int parse_neoforge_spec(const char* spec, char* mc, size_t mcsz,
                         char* loader, size_t loadersz) {
     loader[0] = '\0';

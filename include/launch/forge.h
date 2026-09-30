@@ -92,4 +92,9 @@ int fetch_forge_profile(const LaunchCtx* ctx, const char* client_dir,
 int forge_extract_extra_args(VmJVal* version_json, const char* kind,
                              const char** out_args, int max);
 
+
+void forge_resolve_placeholder(const char* client_dir, const char* classpath,
+                               const char* natives_dir, const char* version_name,
+                               const char* raw, char* out, size_t outsz);
+
 #endif

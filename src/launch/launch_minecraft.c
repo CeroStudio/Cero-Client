@@ -373,8 +373,30 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
     static const char* extra_game[32];
     int extra_jvm_n = 0, extra_game_n = 0;
     if ((is_forge || is_neoforge) && loader_root) {
-        extra_jvm_n  = forge_extract_extra_args(loader_root, "jvm",  extra_jvm,  16);
-        extra_game_n = forge_extract_extra_args(loader_root, "game", extra_game, 32);
+        static const char* raw_jvm[16];
+        static const char* raw_game[32];
+        int raw_jvm_n  = forge_extract_extra_args(loader_root, "jvm",  raw_jvm,  16);
+        int raw_game_n = forge_extract_extra_args(loader_root, "game", raw_game, 32);
+
+        static char jvm_buf[16][MAX_PATH_SIZE];
+        static char game_buf[32][MAX_PATH_SIZE];
+
+        char natives_dir[MAX_PATH_SIZE];
+        snprintf(natives_dir, sizeof(natives_dir), "%s/versions/%s/natives", instance_dir, mc_version);
+
+        for (int i = 0; i < raw_jvm_n; i++) {
+            forge_resolve_placeholder(instance_dir, classpath, natives_dir, version_id_for_args,
+                                      raw_jvm[i], jvm_buf[i], sizeof(jvm_buf[i]));
+            extra_jvm[i] = jvm_buf[i];
+        }
+        extra_jvm_n = raw_jvm_n;
+
+        for (int i = 0; i < raw_game_n; i++) {
+            forge_resolve_placeholder(instance_dir, classpath, natives_dir, version_id_for_args,
+                                      raw_game[i], game_buf[i], sizeof(game_buf[i]));
+            extra_game[i] = game_buf[i];
+        }
+        extra_game_n = raw_game_n;
     }
 
     LaunchParams lp;
