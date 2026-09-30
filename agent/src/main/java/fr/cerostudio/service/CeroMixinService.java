@@ -25,13 +25,13 @@ public class CeroMixinService implements IMixinService, IClassProvider, IClassBy
     @Override public boolean isValid() { return true; }
     @Override public void prepare() {}
     @Override public MixinEnvironment.Phase getInitialPhase() { return MixinEnvironment.Phase.DEFAULT; }
-    
+
     private org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory transformerFactory;
     private org.spongepowered.asm.mixin.transformer.IMixinTransformer transformer;
 
     @Override
     public void offer(IMixinInternal internal) {
-            if (internal instanceof org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory) {
+        if (internal instanceof org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory) {
             this.transformerFactory = (org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory) internal;
         }
     }
@@ -56,6 +56,8 @@ public class CeroMixinService implements IMixinService, IClassProvider, IClassBy
     @Override public ITransformerProvider getTransformerProvider() { return this; }
     @Override public IClassTracker getClassTracker() { return this; }
     @Override public IMixinAuditTrail getAuditTrail() { return this; }
+    @Override public IFeatureValidator getFeatureValidator() { return IFeatureValidator.ALLOW_ALL; }
+    @Override public IAdviceProvider getAdviceProvider() { return IAdviceProvider.GENERIC; }
     @Override public Collection<String> getPlatformAgents() { return Collections.emptyList(); }
     private final IContainerHandle primaryContainer = new org.spongepowered.asm.launch.platform.container.ContainerHandleVirtual("CeroClient");
 
@@ -63,7 +65,7 @@ public class CeroMixinService implements IMixinService, IClassProvider, IClassBy
     @Override public Collection<IContainerHandle> getMixinContainers() { return Collections.emptyList(); }
     @Override public String getSideName() { return "CLIENT"; }
     @Override public MixinEnvironment.CompatibilityLevel getMinCompatibilityLevel() { return MixinEnvironment.CompatibilityLevel.JAVA_8; }
-    @Override public MixinEnvironment.CompatibilityLevel getMaxCompatibilityLevel() { return MixinEnvironment.CompatibilityLevel.JAVA_17; }
+    @Override public MixinEnvironment.CompatibilityLevel getMaxCompatibilityLevel() { return MixinEnvironment.CompatibilityLevel.JAVA_25; }
     @Override
     public ILogger getLogger(String name) {
         return new ILogger() {
@@ -136,6 +138,19 @@ public class CeroMixinService implements IMixinService, IClassProvider, IClassBy
     @Override
     public ClassNode getClassNode(String name, boolean runTransformers) throws ClassNotFoundException, IOException {
         return getClassNode(name);
+    }
+
+    @Override
+    public ClassNode getClassNode(String name, boolean runTransformers, int flags) throws ClassNotFoundException, IOException {
+        ClassLoader cl = getClassLoader();
+        if (cl instanceof RemappingClassLoader) {
+            byte[] bytes = ((RemappingClassLoader) cl).readResourceBytes(name.replace('.', '/') + ".class");
+            if (bytes == null) throw new ClassNotFoundException(name);
+            ClassNode node = new ClassNode();
+            new org.objectweb.asm.ClassReader(bytes).accept(node, flags);
+            return node;
+        }
+        throw new ClassNotFoundException("CeroMixinService cannot load outside RemappingClassLoader: " + name);
     }
 
     @Override
