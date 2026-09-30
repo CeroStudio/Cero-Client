@@ -39,6 +39,7 @@ public class JarRemapper {
             }
 
             stripSignatureAndManifest(outputJar);
+            AccessWidener.widenJar(outputJar);
 
             System.out.println("[CeroRemapper] Remapping terminé avec succès !");
         } catch (IOException e) {

@@ -24,7 +24,7 @@
     #define JAVA_ARCH  "x64"
   #endif
   #define JAVA_EXT     ".tar.gz"
-  #define JAVA_BIN     "Contents/Home/bin/java"
+  #define JAVA_BIN     "jre.bundle/Contents/Home/bin/java"
 #elif defined(__FreeBSD__)
   #define JAVA_FREEBSD 1
   #define JAVA_BIN     "bin/java"

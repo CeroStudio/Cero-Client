@@ -12,6 +12,9 @@ import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Mixins;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.service.MixinService;
+import fr.cerostudio.core.CeroClientMod;
+import fr.cerostudio.remap.AccessWidener;
+import fr.cerostudio.service.CeroMixinService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -104,6 +107,10 @@ public class RemappingClassLoader extends URLClassLoader {
             int n;
             while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);
             byte[] rawBytes = bos.toByteArray();
+
+            if (!name.startsWith("fr.cerostudio.") && !name.equals("module-info")) {
+                rawBytes = AccessWidener.widenClassSafe(rawBytes);
+            }
 
             byte[] transformedBytes = transformWithMixin(name, rawBytes);
 
