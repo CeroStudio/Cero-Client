@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/CeroWorks/Cero-Client?style=flat" alt="Stars">
   <img src="https://img.shields.io/github/license/CeroWorks/Cero-Client?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Minecraft-1.7.10--26.2-green" alt="Versions">
+  <img src="https://img.shields.io/badge/Minecraft-1.7.10--26.3-green" alt="Versions">
   <img src="https://img.shields.io/github/v/release/CeroWorks/Cero-Client?style=flat" alt="Release">
 </p>
 
