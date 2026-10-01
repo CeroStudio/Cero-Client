@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "fr.cerostudio.mixin",
+  "target": "@env(DEFAULT)",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MixinWindowTitle$Sdl",
+    "MixinClientTick$Modern"
+  ]
+}

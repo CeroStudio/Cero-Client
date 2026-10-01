@@ -163,6 +163,11 @@ public class RemappingClassLoader extends URLClassLoader {
             return "mixins.cero.v1_legacy.json";
         }
 
+        if (getResource("org/lwjgl/sdl/SDLVideo.class") != null) {
+            System.out.println("[CeroClassLoader] Chargement des mixins SDL (26.3+)");
+            return "mixins.cero.v1_sdl.json";
+        }
+
         System.out.println("[CeroClassLoader] Chargement des mixins Modern (LWJGL 3)");
         return "mixins.cero.v1_modern.json";
     }

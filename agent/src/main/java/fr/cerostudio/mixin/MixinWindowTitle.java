@@ -4,6 +4,7 @@ import fr.cerostudio.api.CeroApi;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 public final class MixinWindowTitle {
 
@@ -50,6 +51,20 @@ public final class MixinWindowTitle {
         )
         private CharSequence cero$resolveSetTitle(CharSequence originalTitle) {
             return CeroApi.window().resolve(originalTitle.toString());
+        }
+    }
+
+    @Mixin(targets = "com.mojang.blaze3d.platform.Window")
+    public static class Sdl {
+
+        @ModifyVariable(method = "createWindow", at = @At("HEAD"), argsOnly = true)
+        private String cero$resolveCreateTitle(String title) {
+            return CeroApi.window().resolve(title);
+        }
+
+        @ModifyVariable(method = "setTitle", at = @At("HEAD"), argsOnly = true)
+        private String cero$resolveSetTitle(String title) {
+            return CeroApi.window().resolve(title);
         }
     }
 }
