@@ -1,10 +1,9 @@
 #include "../../include/launch/process_step.h"
 #include "../../include/utils/process.h"
-#include "../../include/discord/discord_rpc.h"
+#include "../../include/discord/rpc_helpers.h"
 #include "../../include/ui/ui.h"
 #include "../../include/core/logger.h"
 #include <stdio.h>
-#include <time.h>
 
 void run_game_process(const LaunchCtx* ctx, LaunchUserdata* ud,
                       const char* java_exe, const char** argv,
@@ -18,13 +17,6 @@ void run_game_process(const LaunchCtx* ctx, LaunchUserdata* ud,
         ui_eval(ud->ui, "window._onGameStart && window._onGameStart()");
     }
 
-    {
-        char details[128];
-        snprintf(details, sizeof(details), "Playing %s", version);
-        discord_rpc_update(NULL, details, "logo", "CeroClient",
-                           NULL, NULL, (int64_t)time(NULL));
-    }
-
     int rc = process_run(java_exe, argv);
 
     if (ud && ud->ui) {
@@ -32,8 +24,7 @@ void run_game_process(const LaunchCtx* ctx, LaunchUserdata* ud,
         ui_eval(ud->ui, "window._onGameStop && window._onGameStop()");
     }
 
-    discord_rpc_update(NULL, "Idling in menu", "logo", "CeroClient",
-                       NULL, NULL, (int64_t)time(NULL));
+    rpc_set_idle();
 
     if (rc != 0) log_msg("error", "Game exited with code %d\n", rc);
     else         log_msg("succes", "Game exited cleanly\n");

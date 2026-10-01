@@ -20,11 +20,11 @@ public final class CeroClientMod implements ClientModInitializer {
         String pseudo = CeroApi.player() != null ? CeroApi.player().getUsername() : "Player";
         CeroApi.window().setTitle("CeroClient - " + version + " - " + pseudo);
 
-        connectToLauncher();
+        connectToLauncher(version, pseudo);
         registerShutdownHook();
     }
 
-    private void connectToLauncher() {
+    private void connectToLauncher(String version, String pseudo) {
         String[] programArgs = CeroApi.launchArguments();
         Integer port = LauncherArgs.resolvePort(programArgs);
 
@@ -41,7 +41,7 @@ public final class CeroClientMod implements ClientModInitializer {
 
         CeroApi.launcher().bind(port, connection);
 
-        connection.send("HELLO;CeroClient;" + CeroApi.minecraftVersion());
+        connection.send("HELLO;CeroClient;" + version + ";" + pseudo);
 
         CeroApi.services().register(LauncherConnection.class, connection);
         this.launcherConnection = connection;
