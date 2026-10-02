@@ -2,6 +2,10 @@ package fr.cerostudio.core;
 
 import fr.cerostudio.api.CeroApi;
 import fr.cerostudio.api.event.client.GameStopEvent;
+import fr.cerostudio.api.event.client.ServerConnectEvent;
+import fr.cerostudio.api.event.client.ServerDisconnectEvent;
+import fr.cerostudio.api.event.client.WorldJoinEvent;
+import fr.cerostudio.api.event.client.WorldLeaveEvent;
 import fr.cerostudio.api.mod.ClientModInitializer;
 import fr.cerostudio.core.launcher.LauncherArgs;
 import fr.cerostudio.core.launcher.LauncherConnection;
@@ -22,6 +26,38 @@ public final class CeroClientMod implements ClientModInitializer {
 
         connectToLauncher(version, pseudo);
         registerShutdownHook();
+        registerDiscordPresence();
+    }
+
+    private void registerDiscordPresence() {
+        CeroApi.events().register(WorldJoinEvent.class, event -> {
+            try {
+                CeroApi.discord().setPresence("En jeu", "Monde solo", event.getTimestampMs() / 1000);
+            } catch (Throwable t) {
+                LOGGER.warning("Discord (WorldJoinEvent) en échec : " + t);
+            }
+        });
+
+        CeroApi.events().register(ServerConnectEvent.class, event -> {
+            try {
+                CeroApi.discord().setPresence("En jeu", "Sur " + event.getAddress(), event.getTimestampMs() / 1000);
+            } catch (Throwable t) {
+                LOGGER.warning("Discord (ServerConnectEvent) en échec : " + t);
+            }
+        });
+
+        CeroApi.events().register(WorldLeaveEvent.class, event -> cero$backToMenuPresence());
+        CeroApi.events().register(ServerDisconnectEvent.class, event -> cero$backToMenuPresence());
+
+        cero$backToMenuPresence();
+    }
+
+    private void cero$backToMenuPresence() {
+        try {
+            CeroApi.discord().setPresence("CeroClient", "Dans les menus");
+        } catch (Throwable t) {
+            LOGGER.warning("Discord (retour menu) en échec : " + t);
+        }
     }
 
     private void connectToLauncher(String version, String pseudo) {

@@ -6,6 +6,7 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "MixinWindowTitle$Modern",
-    "MixinClientTick$Modern"
+    "MixinClientTick$Modern",
+    "MixinWorldLifecycle"
   ]
 }
