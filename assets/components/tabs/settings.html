@@ -17,6 +17,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                 <span data-i18n="settings.nav.account">Compte</span>
             </button>
+            <button class="settings-nav-item" onclick="showSettingsSection('bibliotheque')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5H6.5A2.5 2.5 0 0 0 4 19.5z"/></svg>
+                <span data-i18n="settings.nav.library">Bibliothèque</span>
+            </button>
             <button class="settings-nav-item" onclick="showSettingsSection('a-propos')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <span data-i18n="settings.nav.about">À propos</span>
@@ -150,6 +154,49 @@
                         </div>
                         <button class="btn-ghost" style="font-size:11px;padding:5px 12px;color:#f87171;border-color:rgba(248,113,113,0.3);" onclick="resetSettings()" data-i18n="settings.data.reset.button">Réinitialiser</button>
                     </div>
+                </div>
+            </div>
+
+            <div id="settingsSection-bibliotheque" class="settings-section" style="display:none">
+                <div class="settings-group">
+                    <p class="settings-group-title" data-i18n="settings.library.skins">Skins</p>
+
+                    <div class="library-current-row">
+                        <div class="library-current-3d" id="libraryCurrent3D">
+                            <canvas id="libraryCurrentCanvas"></canvas>
+                            <div class="library-current-loading" id="libraryCurrentLoading">
+                                <div class="spin-slow" style="width:18px;height:18px;border:2px solid rgba(255,255,255,0.15);border-top-color:#fff;border-radius:50%;"></div>
+                            </div>
+                            <div class="library-current-fallback" id="libraryCurrentFallback" style="display:none">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                            </div>
+                        </div>
+                        <div class="library-current-info">
+                            <p class="library-current-label" data-i18n="settings.library.currentSkin">Skin actuel</p>
+                            <p class="settings-desc" data-i18n="settings.library.currentSkinDesc">Skin actuellement appliqué sur votre compte Minecraft</p>
+                            <p id="libraryCurrentVariant" class="library-variant-pill">—</p>
+                            <p id="libraryCurrentSource" class="settings-desc" style="margin-top:4px;"></p>
+                        </div>
+                    </div>
+
+                    <div class="library-upload-zone" id="libraryUploadZone">
+                        <input type="file" id="librarySkinInput" accept="image/png" style="display:none">
+                        <div class="library-upload-inner">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <p class="library-upload-title" data-i18n="settings.library.uploadTitle">Glisse un skin PNG ici</p>
+                            <p class="library-upload-sub" data-i18n="settings.library.uploadSub">ou clique pour parcourir — 64×32 ou 64×64</p>
+                        </div>
+                    </div>
+
+                    <div class="library-grid" id="librarySkinGrid"></div>
+
+                    <div class="library-empty" id="libraryEmpty" style="display:none">
+                        <p data-i18n="settings.library.empty">Aucun skin dans ta bibliothèque. Importe-en un !</p>
+                    </div>
+                </div>
+
+                <div class="settings-footer">
+                    <span id="libraryQuotaLabel" class="settings-desc"></span>
                 </div>
             </div>
 
@@ -339,6 +386,313 @@
     display:flex; justify-content:flex-end;
     padding-top:4px;
 }
+
+/* ─── Bibliothèque ─────────────────────────────────────────────────────────── */
+
+/* Skin actuel : viewer 3D vivant */
+.library-current-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.library-current-3d {
+    position: relative;
+    width: 110px;
+    height: 140px;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.4);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+.library-current-3d canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+.library-current-loading,
+.library-current-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    pointer-events: none;
+    background: rgba(0,0,0,0.4);
+}
+.library-current-info {
+    flex: 1;
+    min-width: 0;
+}
+.library-current-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+.library-variant-pill {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-main);
+    border-radius: 6px;
+}
+
+.library-upload-zone {
+    margin: 12px 16px;
+    border: 1.5px dashed rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 22px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.library-upload-zone:hover {
+    border-color: var(--accent-color, #3b82f6);
+    background: rgba(59, 130, 246, 0.04);
+    color: var(--text-main);
+}
+.library-upload-zone.drag-active {
+    border-color: var(--accent-color, #3b82f6);
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--text-main);
+}
+.library-upload-zone.uploading {
+    border-style: solid;
+    border-color: var(--accent-color, #3b82f6);
+    pointer-events: none;
+    opacity: 0.6;
+}
+.library-upload-inner {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+}
+.library-upload-title {
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-main);
+}
+.library-upload-sub {
+    font-size:11px;
+    color:var(--text-muted);
+}
+
+.library-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap:10px;
+    padding:12px 16px;
+}
+.library-card {
+    position:relative;
+    background: rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:12px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    transition: border-color .15s ease, transform .15s ease;
+}
+.library-card:hover {
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+}
+.library-card.active {
+    border-color: var(--accent-color, #3b82f6);
+    box-shadow: 0 0 0 1px var(--accent-color, #3b82f6), 0 4px 12px rgba(0,0,0,0.3);
+}
+.library-card-preview {
+    width:100%;
+    aspect-ratio:1 / 1;
+    background: rgba(0,0,0,0.4);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    cursor:pointer;
+}
+.library-card-preview canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+.library-card-preview .play-hint {
+    position:absolute;
+    inset:auto 0 0 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color:#fff;
+    font-size:9px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    padding:6px 8px;
+    opacity:0;
+    transition: opacity .15s ease;
+}
+.library-card-preview:hover .play-hint { opacity:1; }
+.library-card-info {
+    padding:8px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+.library-card-name {
+    font-size:11px;
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.library-card-meta {
+    font-size:9px;
+    color:var(--text-muted);
+}
+.library-card-actions {
+    display:flex;
+    border-top:1px solid rgba(255,255,255,0.04);
+}
+.library-card-actions button {
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--text-muted);
+    font-size:10px;
+    font-weight:600;
+    padding:6px 4px;
+    cursor:pointer;
+    transition: background .15s ease, color .15s ease;
+}
+.library-card-actions button:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-main);
+}
+.library-card-actions button.apply {
+    color: var(--accent-color, #3b82f6);
+}
+.library-card-actions button.apply:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+.library-card-actions button.delete:hover {
+    background: rgba(231, 76, 60, 0.12);
+    color: #f87171;
+}
+.library-card-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.library-card-fav {
+    position:absolute;
+    top:6px;
+    right:6px;
+    background: rgba(0,0,0,0.6);
+    border:none;
+    color: rgba(255,255,255,0.4);
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition: color .15s ease, background .15s ease;
+    z-index:2;
+}
+.library-card-fav:hover { color:#facc15; }
+.library-card-fav.on { color:#facc15; }
+.library-card-badge {
+    position:absolute;
+    top:6px;
+    left:6px;
+    background: var(--accent-color, #3b82f6);
+    color:#fff;
+    font-size:8px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    padding:2px 6px;
+    border-radius:4px;
+    z-index:2;
+}
+.library-empty {
+    padding:30px 16px;
+    text-align:center;
+    color:var(--text-muted);
+    font-size:12px;
+}
+.library-error {
+    grid-column: 1 / -1;
+    padding:30px 16px;
+    text-align:center;
+    color:#f87171;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+}
+.library-error-title {
+    font-size:13px;
+    font-weight:700;
+}
+.library-error-detail {
+    font-size:11px;
+    color:var(--text-muted);
+    word-break:break-word;
+}
+
+/* Library 3D preview modal */
+.library-modal {
+    position:fixed;
+    inset:0;
+    z-index:600;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px;
+}
+.library-modal-content {
+    background: var(--card-bg);
+    border:1px solid var(--border-color);
+    border-radius:16px;
+    padding:24px;
+    max-width:520px;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+.library-modal-content canvas {
+    width:100%;
+    height:380px;
+    background: rgba(0,0,0,0.4);
+    border-radius:12px;
+    display:block;
+}
+.library-modal-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.library-modal-header p {
+    font-size:13px;
+    font-weight:700;
+}
 </style>
 
 <script>
@@ -387,6 +741,7 @@
         attachDirtyListeners(id);
 
         if (id === 'compte') loadAccountSettings();
+        if (id === 'bibliotheque') initLibrarySection();
         if (id === 'a-propos') loadVersionInfo();
     }
 
@@ -620,6 +975,646 @@ window.confirmLogout = function() {
         pendingLeaveCallback = onConfirmLeave;
         document.getElementById('unsavedModal').classList.add('active');
     };
+
+    
+    let libraryInitialized = false;
+    let librarySkins = [];
+    let libraryCurrentViewer = null;       
+    let libraryCurrentViewerToken = 0;     
+
+    window.initLibrarySection = function() {
+        if (!libraryInitialized) {
+            attachLibraryEventListeners();
+            libraryInitialized = true;
+        }
+        loadLibrarySkins();
+    };
+
+    function attachLibraryEventListeners() {
+        const zone = document.getElementById('libraryUploadZone');
+        const input = document.getElementById('librarySkinInput');
+
+        zone.addEventListener('click', function() { input.click(); });
+        input.addEventListener('change', function() {
+            if (input.files && input.files.length) {
+                uploadSkinFile(input.files[0]);
+                input.value = '';
+            }
+        });
+
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            zone.classList.add('drag-active');
+        });
+        zone.addEventListener('dragleave', function() {
+            zone.classList.remove('drag-active');
+        });
+        zone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            zone.classList.remove('drag-active');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                uploadSkinFile(e.dataTransfer.files[0]);
+            }
+        });
+    }
+
+    function authHeader() {
+        
+        
+        if (typeof window.getMcToken !== 'function') {
+            return Promise.reject(new Error('getMcToken_not_injected'));
+        }
+        return window.getMcToken().then(function(token) {
+            if (!token || typeof token !== 'string') {
+                throw new Error('getMcToken_returned_empty');
+            }
+            return { 'Authorization': 'Bearer ' + token };
+        });
+    }
+
+    async function fetchAuth(url, opts) {
+        const headers = await authHeader();
+        opts = opts || {};
+        opts.headers = Object.assign({}, headers, opts.headers || {});
+        return fetch(url, opts);
+    }
+
+    async function loadLibrarySkins() {
+        
+        if (!window.Cero || !window.Cero.config || !window.Cero.config.apiBase) {
+            console.error('[library] Cero.config.apiBase is missing — server config not injected');
+            showLibraryError("Configuration manquante");
+            return;
+        }
+
+        try {
+            const r = await fetchAuth(window.Cero.config.apiBase + '/api/library/skins');
+
+            
+            
+            if (r.status === 404) {
+                console.error('[library] /api/library/skins → 404');
+                showLibraryError("Endpoint introuvable - Potentiellement en maintenance");
+                return;
+            }
+            if (!r.ok) {
+                const txt = await r.text().catch(() => '');
+                console.error('[library] /api/library/skins → HTTP ' + r.status, txt);
+                showLibraryError('Erreur HTTP ' + r.status);
+                return;
+            }
+
+            const ct = r.headers.get('Content-Type') || '';
+            if (ct.indexOf('application/json') === -1) {
+                const txt = await r.text().catch(() => '');
+                console.error('[library] expected JSON, got ' + ct, txt.slice(0, 200));
+                showLibraryError('Réponse inattendue du serveur');
+                return;
+            }
+
+            const data = await r.json();
+            librarySkins = data.items || [];
+            renderCurrentSkin(data.current);
+            renderLibraryGrid();
+            renderQuota(data.items);
+        } catch (e) {
+            console.error('[library] load failed', e && e.message ? e.message : e, e);
+            showLibraryError(e && e.message ? e.message : 'Erreur inconnue');
+        }
+    }
+
+    function showLibraryError(message) {
+        
+        
+        const grid = document.getElementById('librarySkinGrid');
+        const empty = document.getElementById('libraryEmpty');
+        if (grid) {
+            grid.innerHTML = '<div class="library-error">' +
+                '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+                '<p class="library-error-title">Bibliothèque indisponible</p>' +
+                '<p class="library-error-detail">' + (message || '') + '</p>' +
+                '</div>';
+        }
+        if (empty) empty.style.display = 'none';
+        
+        const loadingEl = document.getElementById('libraryCurrentLoading');
+        const fallbackEl = document.getElementById('libraryCurrentFallback');
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (fallbackEl) fallbackEl.style.display = 'flex';
+    }
+
+    function renderCurrentSkin(current) {
+        const variantEl = document.getElementById('libraryCurrentVariant');
+        const sourceEl = document.getElementById('libraryCurrentSource');
+        const loadingEl = document.getElementById('libraryCurrentLoading');
+        const fallbackEl = document.getElementById('libraryCurrentFallback');
+        const canvasEl = document.getElementById('libraryCurrentCanvas');
+        const containerEl = document.getElementById('libraryCurrent3D');
+
+        
+        if (!current || current.state === 'NONE') {
+            variantEl.textContent = 'Aucun skin';
+            sourceEl.textContent = 'Compte sans skin personnalisé.';
+        } else {
+            variantEl.textContent = current.variant === 'slim' ? 'Slim (Alex)' : 'Classique (Steve)';
+            sourceEl.textContent = current.source === 'DEFAULT'
+                ? 'Skin par défaut Mojang'
+                : 'Skin personnalisé';
+        }
+
+        
+        if (typeof skinview3d === 'undefined') {
+            loadingEl.style.display = 'none';
+            fallbackEl.style.display = 'flex';
+            return;
+        }
+
+        
+        
+        const myToken = ++libraryCurrentViewerToken;
+
+        
+        if (!libraryCurrentViewer) {
+            try {
+                libraryCurrentViewer = new skinview3d.SkinViewer({
+                    canvas: canvasEl,
+                    width: containerEl.clientWidth || 110,
+                    height: containerEl.clientHeight || 140
+                });
+                libraryCurrentViewer.fov = 30;
+                libraryCurrentViewer.zoom = 0.85;
+                libraryCurrentViewer.controls.enableZoom = false;
+                libraryCurrentViewer.controls.enablePan = false;
+                libraryCurrentViewer.controls.autoRotate = true;
+                libraryCurrentViewer.controls.autoRotateSpeed = 1.2;
+                libraryCurrentViewer.animation = new skinview3d.WalkingAnimation();
+                libraryCurrentViewer.animation.speed = 0.5;
+
+                
+                const ro = new ResizeObserver(function() {
+                    if (!libraryCurrentViewer) return;
+                    const w = containerEl.clientWidth || 110;
+                    const h = containerEl.clientHeight || 140;
+                    libraryCurrentViewer.setSize(w, h);
+                });
+                ro.observe(containerEl);
+            } catch (e) {
+                console.error('[library] viewer init:', e);
+                loadingEl.style.display = 'none';
+                fallbackEl.style.display = 'flex';
+                return;
+            }
+        }
+
+        
+        let skinUrl;
+        if (current && current.url && current.source !== 'DEFAULT') {
+            
+            skinUrl = current.url + (current.url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+        } else if (window.myUuid) {
+            
+            
+            skinUrl = 'https://mc-heads.net/skin/' + window.myUuid + '?t=' + Date.now();
+        } else {
+            
+            skinUrl = 'https://mc-heads.net/skin/MHF_Steve';
+        }
+
+        loadingEl.style.display = 'flex';
+        fallbackEl.style.display = 'none';
+
+        libraryCurrentViewer.loadSkin(skinUrl).then(function() {
+            if (myToken !== libraryCurrentViewerToken) return; 
+            loadingEl.style.display = 'none';
+        }).catch(function(err) {
+            console.warn('[library] current skin load failed, fallback to Steve', err);
+            
+            libraryCurrentViewer.loadSkin('https://mc-heads.net/skin/MHF_Steve').then(function() {
+                if (myToken !== libraryCurrentViewerToken) return;
+                loadingEl.style.display = 'none';
+            }).catch(function() {
+                if (myToken !== libraryCurrentViewerToken) return;
+                loadingEl.style.display = 'none';
+                fallbackEl.style.display = 'flex';
+            });
+        });
+    }
+
+    function drawDefaultSkin(canvas) {
+        
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width || 64, canvas.height || 64);
+    }
+
+    function renderLibraryGrid() {
+        const grid = document.getElementById('librarySkinGrid');
+        const empty = document.getElementById('libraryEmpty');
+        grid.innerHTML = '';
+        if (!librarySkins.length) {
+            empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+
+        librarySkins.forEach(function(skin) {
+            grid.appendChild(buildSkinCard(skin));
+        });
+    }
+
+    function buildSkinCard(skin) {
+        const card = document.createElement('div');
+        card.className = 'library-card' + (skin.is_active ? ' active' : '');
+        card.dataset.id = skin.id;
+
+        if (skin.is_active) {
+            const badge = document.createElement('span');
+            badge.className = 'library-card-badge';
+            badge.textContent = 'Actif';
+            card.appendChild(badge);
+        }
+
+        const fav = document.createElement('button');
+        fav.className = 'library-card-fav' + (skin.is_favorite ? ' on' : '');
+        fav.title = skin.is_favorite ? 'Retirer des favoris' : 'Ajouter aux favoris';
+        fav.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="' +
+            (skin.is_favorite ? 'currentColor' : 'none') +
+            '" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+        fav.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFavorite(skin);
+        });
+        card.appendChild(fav);
+
+        const preview = document.createElement('div');
+        preview.className = 'library-card-preview';
+        preview.title = 'Cliquer pour prévisualiser en 3D';
+
+        
+        
+        
+        
+        
+        
+        
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width = 140;
+        previewCanvas.height = 140;
+        preview.appendChild(previewCanvas);
+        const hint = document.createElement('span');
+        hint.className = 'play-hint';
+        hint.textContent = 'Prévisualiser';
+        preview.appendChild(hint);
+        preview.addEventListener('click', function() {
+            openSkin3DModal(skin);
+        });
+        card.appendChild(preview);
+
+        
+        let cardViewer = null;
+        let cardViewerInitialized = false;
+        function initCardViewer() {
+            if (cardViewerInitialized) return;
+            cardViewerInitialized = true;
+            if (typeof skinview3d === 'undefined') {
+                
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    drawSkinFace(img, previewCanvas, skin.metadata && skin.metadata.width || 64);
+                };
+                img.onerror = function() {
+                    const ctx = previewCanvas.getContext('2d');
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+                };
+                img.src = skin.url;
+                return;
+            }
+            try {
+                cardViewer = new skinview3d.SkinViewer({
+                    canvas: previewCanvas,
+                    width: previewCanvas.width,
+                    height: previewCanvas.height
+                });
+                cardViewer.fov = 30;
+                cardViewer.zoom = 0.7;
+                cardViewer.controls.enableZoom = false;
+                cardViewer.controls.enablePan = false;
+                cardViewer.controls.autoRotate = true;
+                cardViewer.controls.autoRotateSpeed = 1.5;
+                cardViewer.animation = new skinview3d.IdleAnimation();
+                cardViewer.animation.speed = 0.3;
+                cardViewer.loadSkin(skin.url).catch(function(){});
+            } catch (e) {
+                console.warn('[library] card viewer init failed', e);
+            }
+        }
+
+        
+        function setCardViewerActive(active) {
+            if (cardViewer) {
+                cardViewer.renderPaused = !active;
+            }
+        }
+
+        if ('IntersectionObserver' in window) {
+            const io = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        initCardViewer();
+                        setCardViewerActive(true);
+                    } else {
+                        setCardViewerActive(false);
+                    }
+                });
+            }, { rootMargin: '100px' });
+            io.observe(card);
+        } else {
+            
+            initCardViewer();
+        }
+
+        const info = document.createElement('div');
+        info.className = 'library-card-info';
+        const nameEl = document.createElement('p');
+        nameEl.className = 'library-card-name';
+        nameEl.textContent = skin.name;
+        nameEl.title = skin.name;
+        const metaEl = document.createElement('p');
+        metaEl.className = 'library-card-meta';
+        const meta = skin.metadata || {};
+        const variantLabel = meta.variant === 'slim' ? 'Slim' : 'Classique';
+        metaEl.textContent = variantLabel + ' · ' + (meta.width || 64) + '×' + (meta.height || 64);
+        info.appendChild(nameEl);
+        info.appendChild(metaEl);
+        card.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'library-card-actions';
+
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'apply';
+        applyBtn.textContent = skin.is_active ? 'Actif' : 'Appliquer';
+        applyBtn.disabled = skin.is_active;
+        applyBtn.addEventListener('click', function() {
+            applySkin(skin, applyBtn);
+        });
+        actions.appendChild(applyBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete';
+        deleteBtn.textContent = 'Supprimer';
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('Supprimer ce skin de ta bibliothèque ?')) {
+                deleteSkin(skin);
+            }
+        });
+        actions.appendChild(deleteBtn);
+
+        card.appendChild(actions);
+        return card;
+    }
+
+    function drawSkinFace(skinImg, canvas, sourceWidth) {
+        
+        
+        const scale = sourceWidth / 64;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const faceSize = 8 * scale;
+        const faceX = 8 * scale;
+        const faceY = 8 * scale;
+        
+        const hatX = 40 * scale;
+        const hatY = 8 * scale;
+        const targetSize = canvas.width * 0.7;
+        const targetX = (canvas.width - targetSize) / 2;
+        const targetY = (canvas.height - targetSize) / 2;
+        
+        ctx.drawImage(skinImg, faceX, faceY, faceSize, faceSize,
+            targetX, targetY, targetSize, targetSize);
+        
+        if (sourceWidth >= 64) {
+            ctx.drawImage(skinImg, hatX, hatY, faceSize, faceSize,
+                targetX, targetY, targetSize, targetSize);
+        }
+    }
+
+    function openSkin3DModal(skin) {
+        
+        
+        const modal = document.createElement('div');
+        modal.className = 'library-modal';
+        modal.innerHTML = `
+            <div class="library-modal-content">
+                <div class="library-modal-header">
+                    <p>${escapeHtml(skin.name)}</p>
+                    <button class="wc-btn" aria-label="Fermer">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+                            <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <canvas></canvas>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn-ghost" style="font-size:11px;padding:6px 12px;">Fermer</button>
+                    <button class="btn-primary" style="font-size:11px;padding:6px 12px;">${skin.is_active ? 'Actif' : 'Appliquer'}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const canvas = modal.querySelector('canvas');
+        const closeBtns = modal.querySelectorAll('.btn-ghost, .wc-btn');
+        const applyBtn = modal.querySelector('.btn-primary');
+
+        let viewer = null;
+        if (typeof skinview3d !== 'undefined') {
+            try {
+                viewer = new skinview3d.SkinViewer({
+                    canvas: canvas,
+                    width: canvas.clientWidth || 460,
+                    height: 380
+                });
+                viewer.loadSkin(skin.url).catch(() => {});
+                viewer.fov = 35;
+                viewer.zoom = 0.9;
+                viewer.controls.enableZoom = true;
+                viewer.animation = new skinview3d.WalkingAnimation();
+                viewer.animation.speed = 0.5;
+            } catch (e) {
+                console.error('[library] 3D preview:', e);
+            }
+        }
+
+        function close() {
+            if (viewer) {
+                try { viewer.dispose(); } catch(e){}
+            }
+            if (modal.parentNode) modal.parentNode.removeChild(modal);
+        }
+        closeBtns.forEach(function(b) { b.addEventListener('click', close); });
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) close();
+        });
+        if (!skin.is_active) {
+            applyBtn.addEventListener('click', function() {
+                close();
+                applySkin(skin);
+            });
+        }
+    }
+
+    async function uploadSkinFile(file) {
+        if (!file) return;
+        if (file.type && file.type !== 'image/png' && !/\.png$/i.test(file.name)) {
+            alert('Le skin doit être un fichier PNG.');
+            return;
+        }
+        if (file.size > 1024 * 1024) {
+            alert('Le skin ne doit pas dépasser 1 Mo.');
+            return;
+        }
+
+        const zone = document.getElementById('libraryUploadZone');
+        zone.classList.add('uploading');
+        try {
+            const token = await window.getMcToken();
+            const fd = new FormData();
+            fd.append('file', file);
+            const r = await fetch(window.Cero.config.apiBase + '/api/library/skins', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            });
+            const data = await r.json();
+            if (!r.ok || !data.ok) {
+                const detail = data.detail || data.error || ('HTTP ' + r.status);
+                alert('Upload refusé : ' + detail);
+                return;
+            }
+            
+            librarySkins.unshift(data.item);
+            renderLibraryGrid();
+            if (data.quota) renderQuota(librarySkins, data.quota);
+        } catch (e) {
+            console.error('[library] upload failed', e);
+            alert('Échec de l\'upload : ' + (e.message || e));
+        } finally {
+            zone.classList.remove('uploading');
+        }
+    }
+
+    async function applySkin(skin, btnEl) {
+        const btn = btnEl || null;
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+        }
+        try {
+            const r = await fetchAuth(
+                window.Cero.config.apiBase + '/api/library/skins/' + skin.id + '/apply',
+                { method: 'POST' }
+            );
+            const data = await r.json();
+            if (!r.ok || !data.ok) {
+                const detail = data.mojang_body
+                    ? (data.mojang_body.error || data.mojang_body.errorMessage || 'erreur Mojang')
+                    : (data.error || ('HTTP ' + r.status));
+                alert('Application impossible : ' + detail);
+                if (btn) { btn.disabled = false; btn.textContent = 'Appliquer'; }
+                return;
+            }
+            
+            await loadLibrarySkins();
+            
+            
+            if (window.initSkinViewer && window.myUuid) {
+                
+                window.initSkinViewer('https://mc-heads.net/skin/' + window.myUuid + '?t=' + Date.now());
+            }
+        } catch (e) {
+            console.error('[library] apply failed', e);
+            alert('Échec de l\'application : ' + (e.message || e));
+            if (btn) { btn.disabled = false; btn.textContent = 'Appliquer'; }
+        }
+    }
+
+    async function deleteSkin(skin) {
+        try {
+            const r = await fetchAuth(
+                window.Cero.config.apiBase + '/api/library/skins/' + skin.id,
+                { method: 'DELETE' }
+            );
+            const data = await r.json();
+            if (!r.ok || !data.ok) {
+                alert('Suppression impossible : ' + (data.error || ('HTTP ' + r.status)));
+                return;
+            }
+            librarySkins = librarySkins.filter(function(s) { return s.id !== skin.id; });
+            renderLibraryGrid();
+            renderQuota(librarySkins);
+        } catch (e) {
+            console.error('[library] delete failed', e);
+            alert('Échec de la suppression : ' + (e.message || e));
+        }
+    }
+
+    async function toggleFavorite(skin) {
+        const newVal = !skin.is_favorite;
+        try {
+            const r = await fetchAuth(
+                window.Cero.config.apiBase + '/api/library/skins/' + skin.id,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_favorite: newVal })
+                }
+            );
+            const data = await r.json();
+            if (!r.ok || !data.ok) return;
+            skin.is_favorite = newVal;
+            
+            librarySkins.sort(function(a, b) {
+                if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
+                return b.created_at - a.created_at;
+            });
+            renderLibraryGrid();
+        } catch (e) {
+            console.error('[library] toggle fav failed', e);
+        }
+    }
+
+    function renderQuota(items, quotaOverride) {
+        const label = document.getElementById('libraryQuotaLabel');
+        if (!label) return;
+        if (quotaOverride) {
+            const usedMo = (quotaOverride.used / 1024 / 1024).toFixed(1);
+            const limitMo = (quotaOverride.limit / 1024 / 1024).toFixed(0);
+            label.textContent = usedMo + ' / ' + limitMo + ' Mo utilisés sur 24 h';
+            return;
+        }
+        
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        let used = 0;
+        (items || librarySkins).forEach(function(s) {
+            if (s.created_at && s.created_at >= cutoff) used += s.size || 0;
+        });
+        const usedMo = (used / 1024 / 1024).toFixed(1);
+        const limitMo = (10).toFixed(0);
+        label.textContent = usedMo + ' / ' + limitMo + ' Mo utilisés sur 24 h';
+    }
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+    }
 
 })();
 </script>

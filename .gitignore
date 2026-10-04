@@ -44,3 +44,5 @@ webview2_sdk/
 *.log
 
 launch_msys2.bat
+
+assets/style/tailwind.css

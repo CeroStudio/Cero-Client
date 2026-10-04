@@ -31,9 +31,17 @@
 
             <div id="chatMessages" class="chat-messages flex-1 overflow-y-auto"></div>
 
-            <div class="chat-input-bar">
-                <input id="chatInput" type="text" maxlength="1000" placeholder="Écrire un message..." autocomplete="off">
-                <button id="chatSendBtn" class="btn-primary" onclick="sendChatMessage()">Envoyer</button>
+            <div class="chat-input-wrap">
+                <div id="chatAttachmentPreview" class="chat-attachment-preview" style="display:none"></div>
+                <div class="chat-input-bar">
+                    <input id="chatFileInput" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,image/bmp,audio/mpeg,audio/mp3,audio/ogg,audio/wav,audio/mp4,audio/aac,audio/x-m4a,video/mp4,video/webm,video/ogg,video/quicktime,video/x-matroska" style="display:none">
+                    <button id="chatAttachBtn" class="chat-attach-btn" type="button" aria-label="Joindre un fichier" title="Joindre une image / un son / une vidéo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    </button>
+                    <input id="chatInput" type="text" maxlength="1000" placeholder="Écrire un message..." autocomplete="off">
+                    <button id="chatSendBtn" class="btn-primary" onclick="sendChatMessage()">Envoyer</button>
+                </div>
+                <div id="chatQuotaBar" class="chat-quota-bar" title="Quota d'envoi de fichiers (50 Mo / 24 h)"></div>
             </div>
 
         </div>
@@ -187,9 +195,243 @@
     border-radius:50%;
     border:2px solid var(--bg-color, #1a1a1a);
 }
-.status-dot.online   { background:#3ba55d; }  
-.status-dot.ingame   { background:#5865f2; }  
-.status-dot.offline  { background:#747f8d; }  
+.status-dot.online   { background:#3ba55d; }
+.status-dot.ingame   { background:#5865f2; }
+.status-dot.offline  { background:#747f8d; }
+
+.chat-input-wrap {
+    border-top:1px solid var(--border-color, rgba(255,255,255,0.08));
+    background: rgba(0,0,0,0.15);
+}
+.chat-attach-btn {
+    width:36px;
+    height:36px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:10px;
+    color: var(--text-muted);
+    cursor:pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.chat-attach-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text-main);
+    border-color: rgba(255,255,255,0.12);
+}
+.chat-attach-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.chat-input-bar { padding:12px 16px 8px; }
+
+.chat-attachment-preview {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:10px 16px 0;
+}
+.chat-attachment-preview .att-chip {
+    position:relative;
+    width:64px;
+    height:64px;
+    border-radius:8px;
+    overflow:hidden;
+    background: rgba(255,255,255,0.05);
+    border:1px solid var(--border-color);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--text-muted);
+}
+.chat-attachment-preview .att-chip img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+.chat-attachment-preview .att-chip .att-chip-icon {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:6px;
+    text-align:center;
+}
+.chat-attachment-preview .att-chip .att-chip-name {
+    font-size:9px;
+    font-weight:600;
+    max-width:60px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.chat-attachment-preview .att-chip .att-chip-remove {
+    position:absolute;
+    top:2px;
+    right:2px;
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background: rgba(0,0,0,0.7);
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    line-height:1;
+}
+.chat-attachment-preview .att-chip .att-chip-progress {
+    position:absolute;
+    inset:auto 0 0 0;
+    height:3px;
+    background: var(--accent-color, #3b82f6);
+    width:0%;
+    transition: width .2s ease;
+}
+.chat-attachment-preview .att-chip.uploading::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: rgba(0,0,0,0.45);
+}
+.chat-attachment-preview .att-chip.error {
+    border-color:#ef4444;
+    color:#ef4444;
+}
+
+.chat-quota-bar {
+    height:3px;
+    background: rgba(255,255,255,0.04);
+    border-radius:2px;
+    overflow:hidden;
+    position:relative;
+    margin: 0 16px 8px;
+}
+.chat-quota-bar.has-usage::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: linear-gradient(90deg, #4ade80 0%, #facc15 70%, #f87171 100%);
+    width: var(--quota-pct, 0%);
+    transition: width .4s ease;
+    border-radius:2px;
+}
+.chat-quota-bar.near-limit::after { background:#facc15; }
+.chat-quota-bar.over-limit::after { background:#f87171; }
+.chat-quota-bar .quota-label {
+    position:absolute;
+    top:-16px;
+    right:0;
+    font-size:9px;
+    color: var(--text-muted);
+    opacity:0.7;
+}
+
+.chat-bubble-attachments {
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:6px;
+    max-width:340px;
+}
+.chat-bubble-attachments:empty { display:none; }
+
+.att-image-grid {
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:4px;
+    max-width:300px;
+}
+.att-image-grid.single { grid-template-columns: 1fr; max-width:240px; }
+.att-image-grid img {
+    width:100%;
+    height:100%;
+    max-height:200px;
+    object-fit:cover;
+    border-radius:8px;
+    cursor:pointer;
+    background: rgba(0,0,0,0.2);
+    display:block;
+}
+
+.att-video {
+    width:100%;
+    max-width:300px;
+    border-radius:8px;
+    background:#000;
+    display:block;
+}
+.att-audio {
+    width:100%;
+    max-width:280px;
+    height:36px;
+    border-radius:8px;
+}
+.att-file {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius:8px;
+    font-size:12px;
+    color: var(--text-main);
+    text-decoration:none;
+    transition: background .15s ease;
+    max-width:240px;
+}
+.att-file:hover { background: rgba(0,0,0,0.3); }
+.att-file svg { flex-shrink:0; }
+.att-file .att-file-info { min-width:0; }
+.att-file .att-file-name {
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:block;
+}
+.att-file .att-file-meta {
+    font-size:10px;
+    color: var(--text-muted);
+}
+
+.chat-lightbox {
+    position:fixed;
+    inset:0;
+    z-index:700;
+    background: rgba(0,0,0,0.92);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px;
+    cursor:zoom-out;
+    animation: fadeUp .15s ease;
+}
+.chat-lightbox img {
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    border-radius:8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+.chat-lightbox .close-btn {
+    position:absolute;
+    top:16px;
+    right:16px;
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    background: rgba(255,255,255,0.1);
+    border:none;
+    color:#fff;
+    font-size:20px;
+    cursor:pointer;
+}
 </style>
 
 <script>
@@ -198,6 +440,15 @@
     let activeChatUuid = null;
     let messagesCache = {};
     let unreadCounts = {};
+    let pendingAttachments = [];
+
+    const QUOTA_LIMIT = 50 * 1024 * 1024;
+    const ACCEPTED_MIME = new Set([
+        'image/png','image/jpeg','image/gif','image/webp','image/bmp',
+        'audio/mpeg','audio/mp3','audio/ogg','audio/wav','audio/x-wav',
+        'audio/webm','audio/mp4','audio/aac','audio/x-m4a',
+        'video/mp4','video/webm','video/ogg','video/quicktime','video/x-matroska'
+    ]);
 
     document.addEventListener('DOMContentLoaded', function() {
         if (window.friendsCache && window.friendsCache.length > 0) {
@@ -207,6 +458,7 @@
         }
 
         loadUnreadCounts();
+        refreshQuota();
 
         ceroWS.onMessage(function(msg) {
             if (!msg || !msg.type) return;
@@ -219,10 +471,259 @@
             }
         });
 
-        document.getElementById('chatInput').addEventListener('keydown', function(e) {
+        const input = document.getElementById('chatInput');
+        input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
         });
+
+        const attachBtn = document.getElementById('chatAttachBtn');
+        const fileInput = document.getElementById('chatFileInput');
+        attachBtn.addEventListener('click', function() { fileInput.click(); });
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files && fileInput.files.length) {
+                handleFilesSelected(fileInput.files);
+                fileInput.value = '';
+            }
+        });
+
+
+        const chatPanel = document.getElementById('chatPanel');
+        if (chatPanel) {
+            chatPanel.addEventListener('dragover', function(e) {
+                if (!activeChatUuid) return;
+                e.preventDefault();
+                chatPanel.classList.add('drag-active');
+            });
+            chatPanel.addEventListener('dragleave', function(e) {
+                if (e.target === chatPanel) chatPanel.classList.remove('drag-active');
+            });
+            chatPanel.addEventListener('drop', function(e) {
+                if (!activeChatUuid) return;
+                e.preventDefault();
+                chatPanel.classList.remove('drag-active');
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                    handleFilesSelected(e.dataTransfer.files);
+                }
+            });
+        }
+
+        document.addEventListener('paste', function(e) {
+            if (!activeChatUuid) return;
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            const files = [];
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                if (it.kind === 'file' && it.type && ACCEPTED_MIME.has(it.type)) {
+                    const f = it.getAsFile();
+                    if (f) files.push(f);
+                }
+            }
+            if (files.length) {
+                e.preventDefault();
+                handleFilesSelected(files);
+            }
+        });
     });
+
+    function refreshQuota() {
+        window.getMcToken().then(function(token) {
+            return fetch(window.Cero.config.apiBase + '/api/uploads/quota', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function(r) { return r.json(); });
+        }).then(function(data) {
+            updateQuotaBar(data.used || 0, data.remaining || 0, data.limit || QUOTA_LIMIT);
+        }).catch(function(e) {});
+    }
+
+    function updateQuotaBar(used, remaining, limit) {
+        const bar = document.getElementById('chatQuotaBar');
+        if (!bar) return;
+        const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+        bar.style.setProperty('--quota-pct', pct + '%');
+        bar.classList.toggle('has-usage', used > 0);
+        bar.classList.toggle('near-limit', pct >= 80 && pct < 100);
+        bar.classList.toggle('over-limit', pct >= 100);
+        const usedMo = (used / (1024*1024)).toFixed(1);
+        const limitMo = (limit / (1024*1024)).toFixed(0);
+        bar.title = usedMo + ' Mo / ' + limitMo + ' Mo utilisés sur 24 h';
+    }
+
+    function handleFilesSelected(fileList) {
+        if (!activeChatUuid) return;
+        const files = Array.prototype.slice.call(fileList);
+        files.forEach(function(f) {
+            if (!ACCEPTED_MIME.has(f.type)) {
+                addErrorChip(f.name || 'fichier', 'Type non supporté');
+                return;
+            }
+            uploadFile(f);
+        });
+    }
+
+    function uploadFile(file) {
+        const chip = createPendingChip(file);
+        document.getElementById('chatAttachmentPreview').style.display = 'flex';
+
+        window.getMcToken().then(function(token) {
+            return new Promise(function(resolve, reject) {
+                const xhr = new XMLHttpRequest();
+                const fd = new FormData();
+                fd.append('file', file);
+
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        chip.querySelector('.att-chip-progress').style.width = pct + '%';
+                    }
+                });
+
+                xhr.addEventListener('load', function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            if (data.ok && data.attachment) {
+                                resolve({ attachment: data.attachment, quota: data.quota });
+                            } else {
+                                reject(new Error(data.error || 'upload_failed'));
+                            }
+                        } catch (e) {
+                            reject(new Error('bad_response'));
+                        }
+                    } else {
+                        try {
+                            const err = JSON.parse(xhr.responseText);
+                            reject(new Error(err.error || 'http_' + xhr.status));
+                        } catch (e) {
+                            reject(new Error('http_' + xhr.status));
+                        }
+                    }
+                });
+                xhr.addEventListener('error', function() { reject(new Error('network_error')); });
+                xhr.addEventListener('abort', function() { reject(new Error('aborted')); });
+
+                xhr.open('POST', window.Cero.config.apiBase + '/api/uploads');
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                xhr.send(fd);
+            });
+        }).then(function(result) {
+            chip.classList.remove('uploading');
+            chip.querySelector('.att-chip-progress').style.width = '100%';
+            const att = result.attachment;
+            const imgEl = chip.querySelector('img');
+            if (att.kind === 'image' && imgEl) {
+                imgEl.src = att.url;
+            }
+            pendingAttachments.push({
+                id: att.id,
+                url: att.url,
+                name: att.name,
+                mime: att.mime,
+                kind: att.kind,
+                size: att.size,
+                status: 'done',
+                chipEl: chip
+            });
+            if (result.quota) {
+                updateQuotaBar(result.quota.used, result.quota.remaining, result.quota.limit);
+            } else {
+                refreshQuota();
+            }
+        }).catch(function(err) {
+            chip.classList.remove('uploading');
+            chip.classList.add('error');
+            const errEl = chip.querySelector('.att-chip-name');
+            if (errEl) errEl.textContent = humanError(err.message);
+            setTimeout(function() {
+                if (chip.parentNode) chip.parentNode.removeChild(chip);
+                if (document.getElementById('chatAttachmentPreview').children.length === 0) {
+                    document.getElementById('chatAttachmentPreview').style.display = 'none';
+                }
+            }, 4000);
+        });
+    }
+
+    function createPendingChip(file) {
+        const chip = document.createElement('div');
+        chip.className = 'att-chip uploading';
+
+        const remove = document.createElement('button');
+        remove.className = 'att-chip-remove';
+        remove.innerHTML = '&times;';
+        remove.title = 'Annuler';
+        chip.appendChild(remove);
+
+        if (file.type && file.type.indexOf('image/') === 0) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            chip.appendChild(img);
+        } else {
+            const icon = document.createElement('div');
+            icon.className = 'att-chip-icon';
+            icon.innerHTML = fileKindIconSvg(file.type) +
+                '<span class="att-chip-name">' + escapeHtml(file.name || '') + '</span>';
+            chip.appendChild(icon);
+        }
+
+        const progress = document.createElement('div');
+        progress.className = 'att-chip-progress';
+        chip.appendChild(progress);
+
+        remove.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const idx = pendingAttachments.findIndex(function(p) { return p.chipEl === chip; });
+            if (idx !== -1) pendingAttachments.splice(idx, 1);
+            if (chip.parentNode) chip.parentNode.removeChild(chip);
+            if (document.getElementById('chatAttachmentPreview').children.length === 0) {
+                document.getElementById('chatAttachmentPreview').style.display = 'none';
+            }
+        });
+
+        document.getElementById('chatAttachmentPreview').appendChild(chip);
+        return chip;
+    }
+
+    function addErrorChip(name, msg) {
+        const preview = document.getElementById('chatAttachmentPreview');
+        preview.style.display = 'flex';
+        const chip = document.createElement('div');
+        chip.className = 'att-chip error';
+        chip.innerHTML = '<div class="att-chip-icon"><span style="font-size:14px;">!</span>' +
+                         '<span class="att-chip-name">' + escapeHtml(msg) + '</span></div>';
+        preview.appendChild(chip);
+        setTimeout(function() {
+            if (chip.parentNode) chip.parentNode.removeChild(chip);
+            if (preview.children.length === 0) preview.style.display = 'none';
+        }, 4000);
+    }
+
+    function humanError(code) {
+        switch (code) {
+            case 'quota_exceeded': return 'Quota dépassé';
+            case 'file_too_large': return 'Trop volumineux';
+            case 'unsupported_type': return 'Type refusé';
+            case 'network_error': return 'Réseau';
+            default: return code || 'Erreur';
+        }
+    }
+
+    function fileKindIconSvg(mime) {
+        if (!mime) return fileIconSvg();
+        if (mime.indexOf('image/') === 0) {
+            return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>';
+        }
+        if (mime.indexOf('audio/') === 0) {
+            return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>';
+        }
+        if (mime.indexOf('video/') === 0) {
+            return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-4v12l-6-4z"/></svg>';
+        }
+        return fileIconSvg();
+    }
+
+    function fileIconSvg() {
+        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+    }
 
     function getMyUuid() {
         if (window.myUuid) return window.myUuid;
@@ -339,6 +840,7 @@
         } else {
             fetchMessages(uuid);
         }
+        refreshQuota();
     }
 
     function fetchMessages(uuid) {
@@ -362,15 +864,15 @@
     function getSenderName(uuid) {
         const myU = getMyUuid();
         const authorUuid = uuid || getMsgAuthorUuid(uuid);
-        
+
         if (activeChatUuid && authorUuid !== activeChatUuid) {
             return "Moi";
         }
-        
+
         if (myU && authorUuid === myU) {
             return "Moi";
         }
-        
+
         const friend = allFriends.find(f => f.uuid === authorUuid);
         return friend ? friend.username : "Ami";
     }
@@ -378,15 +880,15 @@
     function getSenderAvatar(uuid) {
         const myU = getMyUuid();
         const authorUuid = uuid || getMsgAuthorUuid(uuid);
-        
+
         if (activeChatUuid && authorUuid !== activeChatUuid) {
             if (myU) return 'https://mc-heads.net/avatar/' + encodeURIComponent(myU) + '/24';
             return 'https://mc-heads.net/avatar/char/24';
         }
-        
+
         const friend = allFriends.find(f => f.uuid === authorUuid);
         if (friend) return friend.avatarUrl;
-        
+
         return 'https://mc-heads.net/avatar/' + encodeURIComponent(authorUuid || 'char') + '/24';
     }
 
@@ -405,7 +907,7 @@
     function buildBubble(m) {
         const authorUuid = getMsgAuthorUuid(m);
         const myU = getMyUuid();
-        
+
         let mine = false;
         if (activeChatUuid) {
             mine = (authorUuid !== activeChatUuid);
@@ -427,8 +929,25 @@
 
         const bubble = document.createElement('div');
         bubble.className = 'chat-bubble';
-        bubble.textContent = m.content;
+
+        if (m.content && m.content.trim()) {
+            const lines = (m.content || '').split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (i > 0) bubble.appendChild(document.createElement('br'));
+                bubble.appendChild(document.createTextNode(lines[i]));
+            }
+        } else if (!m.attachments || m.attachments.length === 0) {
+            bubble.textContent = '';
+        } else {
+            bubble.style.minHeight = '0';
+            bubble.style.padding = m.content ? '8px 12px' : '4px';
+        }
         contentWrapper.appendChild(bubble);
+
+        if (m.attachments && m.attachments.length) {
+            const attWrap = renderAttachments(m.attachments, mine);
+            bubble.appendChild(attWrap);
+        }
 
         const meta = document.createElement('div');
         meta.className = 'chat-meta';
@@ -457,6 +976,82 @@
         return row;
     }
 
+    function renderAttachments(atts, mine) {
+        const wrap = document.createElement('div');
+        wrap.className = 'chat-bubble-attachments';
+
+        const images = atts.filter(a => a.kind === 'image');
+        const others = atts.filter(a => a.kind !== 'image');
+
+        if (images.length) {
+            const grid = document.createElement('div');
+            grid.className = 'att-image-grid' + (images.length === 1 ? ' single' : '');
+            images.forEach(function(a) {
+                const img = document.createElement('img');
+                img.src = a.url;
+                img.alt = a.name || '';
+                img.loading = 'lazy';
+                img.addEventListener('click', function() { openLightbox(a.url); });
+                grid.appendChild(img);
+            });
+            wrap.appendChild(grid);
+        }
+
+        others.forEach(function(a) {
+            if (a.kind === 'audio') {
+                const audio = document.createElement('audio');
+                audio.className = 'att-audio';
+                audio.controls = true;
+                audio.preload = 'metadata';
+                audio.src = a.url;
+                wrap.appendChild(audio);
+            } else if (a.kind === 'video') {
+                const video = document.createElement('video');
+                video.className = 'att-video';
+                video.controls = true;
+                video.preload = 'metadata';
+                video.src = a.url;
+                wrap.appendChild(video);
+            } else {
+                const link = document.createElement('a');
+                link.className = 'att-file';
+                link.href = a.url;
+                link.target = '_blank';
+                link.rel = 'noopener';
+                link.innerHTML = fileKindIconSvg(a.mime) +
+                    '<span class="att-file-info">' +
+                        '<span class="att-file-name">' + escapeHtml(a.name || 'fichier') + '</span>' +
+                        '<span class="att-file-meta">' + humanSize(a.size) + '</span>' +
+                    '</span>';
+                wrap.appendChild(link);
+            }
+        });
+
+        return wrap;
+    }
+
+    function openLightbox(url) {
+        const lb = document.createElement('div');
+        lb.className = 'chat-lightbox';
+        lb.innerHTML = '<button class="close-btn" aria-label="Fermer">&times;</button>';
+        const img = document.createElement('img');
+        img.src = url;
+        lb.appendChild(img);
+        lb.addEventListener('click', function(e) {
+            if (e.target === lb || e.target.classList.contains('close-btn')) {
+                document.body.removeChild(lb);
+            }
+        });
+        document.body.appendChild(lb);
+    }
+
+    function humanSize(bytes) {
+        if (!bytes && bytes !== 0) return '';
+        if (bytes < 1024) return bytes + ' o';
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' Ko';
+        return (bytes/1024/1024).toFixed(1) + ' Mo';
+    }
+
     function formatTime(ts) {
         const d = new Date(ts);
         return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
@@ -472,47 +1067,65 @@
         if (!activeChatUuid) return;
         const input = document.getElementById('chatInput');
         const content = input.value.trim();
-        if (!content) return;
-        input.value = '';
+        const attachmentIds = pendingAttachments
+            .filter(p => p.status === 'done')
+            .map(p => p.id);
+
+        if (!content && attachmentIds.length === 0) return;
+
+        const sendBtn = document.getElementById('chatSendBtn');
         input.disabled = true;
+        sendBtn.disabled = true;
 
         window.getMcToken().then(function(token) {
-            fetch(window.Cero.config.apiBase + '/api/messages', {
+            return fetch(window.Cero.config.apiBase + '/api/messages', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to: activeChatUuid, content: content })
-            })
-            .then(r => r.json())
-            .then(data => {
-                input.disabled = false;
-                if (data.ok) {
-                    if (!messagesCache[activeChatUuid]) messagesCache[activeChatUuid] = [];
-                    
-                    const myU = getMyUuid();
-                    if (myU && data.message) {
-                        data.message.from_uuid = myU;
-                    }
-                    
-                    messagesCache[activeChatUuid].push(data.message);
-                    renderMessages(activeChatUuid);
+                body: JSON.stringify({
+                    to: activeChatUuid,
+                    content: content,
+                    attachment_ids: attachmentIds
+                })
+            });
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            input.disabled = false;
+            sendBtn.disabled = false;
+            if (data.ok) {
+                input.value = '';
+                pendingAttachments = [];
+                document.getElementById('chatAttachmentPreview').innerHTML = '';
+                document.getElementById('chatAttachmentPreview').style.display = 'none';
+                if (!messagesCache[activeChatUuid]) messagesCache[activeChatUuid] = [];
+                const myU = getMyUuid();
+                if (myU && data.message) {
+                    data.message.from_uuid = myU;
                 }
-            })
-            .catch(e => { input.disabled = false; console.error('[chat] send failed', e); });
+                messagesCache[activeChatUuid].push(data.message);
+                renderMessages(activeChatUuid);
+                refreshQuota();
+            } else if (data.error) {
+                console.error('[chat] send error:', data.error);
+                alert('Erreur: ' + data.error);
+            }
+        }).catch(function(e) {
+            input.disabled = false;
+            sendBtn.disabled = false;
+            console.error('[chat] send failed', e);
         });
     };
 
     function handleIncomingMessage(msg, fromUser) {
         let messageObj = msg.message || msg;
-        
+
         if (fromUser && !messageObj.from_uuid) {
             messageObj.from_uuid = fromUser;
         }
-        
+
         const authorUuid = getMsgAuthorUuid(messageObj);
         const myU = getMyUuid();
-        
+
         let otherUuid = activeChatUuid;
-        
+
         if (authorUuid) {
             if (myU && authorUuid === myU) {
                 otherUuid = messageObj.to_uuid || messageObj.to || activeChatUuid;
@@ -523,7 +1136,10 @@
         }
 
         if (!messagesCache[otherUuid]) messagesCache[otherUuid] = [];
-        messagesCache[otherUuid].push(messageObj);
+        const existing = messagesCache[otherUuid].find(function(m) { return m.id === messageObj.id; });
+        if (!existing) {
+            messagesCache[otherUuid].push(messageObj);
+        }
 
         if (activeChatUuid === otherUuid) {
             renderMessages(otherUuid);
@@ -564,6 +1180,10 @@
         const row = document.querySelector('.chat-bubble-row[data-id="' + id + '"]');
         if (!row) return;
         const bubble = row.querySelector('.chat-bubble');
+        if (bubble.querySelector('.chat-bubble-attachments')) {
+            alert('Les messages avec pièces jointes ne peuvent pas être modifiés.');
+            return;
+        }
         const original = bubble.textContent;
 
         const input = document.createElement('input');
@@ -618,5 +1238,6 @@
         });
     };
 
+    window.ceroChat = { refreshQuota: refreshQuota };
 })();
 </script>

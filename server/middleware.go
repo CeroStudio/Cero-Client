@@ -127,6 +127,10 @@ func messagesRateLimit(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if r.Method == http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
 		ok, _ := messagesLimiter.allow(clientKey(r))
 		if !ok {
 			writeJSON(w, http.StatusTooManyRequests, M{"error": "rate_limited"})

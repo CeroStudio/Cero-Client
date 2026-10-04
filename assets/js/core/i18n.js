@@ -11,7 +11,7 @@
             common: { save: "Enregistrer", cancel: "Annuler" },
             settings: {
                 title: "Paramètres",
-                nav: { game: "Jeu", interface: "Interface", account: "Compte", about: "À propos" },
+                nav: { game: "Jeu", interface: "Interface", account: "Compte", library: "Bibliothèque", about: "À propos" },
                 performance: { title: "Performance" },
                 ram: { label: "RAM allouée", desc: "Mémoire maximale pour Minecraft" },
                 launch: {
@@ -27,6 +27,14 @@
                 account: {
                     active: "Compte actif", connected: "Connecté", actions: "Actions",
                     logout: { label: "Se déconnecter", desc: "Supprime le compte de ce launcher", button: "Déconnexion" }
+                },
+                library: {
+                    skins: "Skins",
+                    currentSkin: "Skin actuel",
+                    currentSkinDesc: "Skin actuellement appliqué sur votre compte Minecraft",
+                    uploadTitle: "Glisse un skin PNG ici",
+                    uploadSub: "ou clique pour parcourir — 64×32 ou 64×64",
+                    empty: "Aucun skin dans ta bibliothèque. Importe-en un !"
                 },
                 data: {
                     title: "Données",
@@ -67,7 +75,7 @@
             common: { save: "Save", cancel: "Cancel" },
             settings: {
                 title: "Settings",
-                nav: { game: "Game", interface: "Interface", account: "Account", about: "About" },
+                nav: { game: "Game", interface: "Interface", account: "Account", library: "Library", about: "About" },
                 performance: { title: "Performance" },
                 ram: { label: "Allocated RAM", desc: "Maximum memory for Minecraft" },
                 launch: {
@@ -87,6 +95,14 @@
                 data: {
                     title: "Data",
                     reset: { label: "Reset settings", desc: "Restores all settings to their defaults", button: "Reset" }
+                },
+                library: {
+                    skins: "Skins",
+                    currentSkin: "Current skin",
+                    currentSkinDesc: "Skin currently applied to your Minecraft account",
+                    uploadTitle: "Drop a PNG skin here",
+                    uploadSub: "or click to browse — 64×32 or 64×64",
+                    empty: "No skins in your library. Import one!"
                 },
                 about: { version: "Launcher version", licenses: "Licenses" },
                 unsaved: { title: "Unsaved changes", body: "You have unsaved changes.", discard: "Discard changes" },
@@ -123,7 +139,7 @@
             common: { save: "Speichern", cancel: "Abbrechen" },
             settings: {
                 title: "Einstellungen",
-                nav: { game: "Spiel", interface: "Oberfläche", account: "Konto", about: "Über" },
+                nav: { game: "Spiel", interface: "Oberfläche", account: "Konto", library: "Bibliothek", about: "Über" },
                 performance: { title: "Leistung" },
                 ram: { label: "Zugewiesener RAM", desc: "Maximaler Speicher für Minecraft" },
                 launch: {
@@ -143,6 +159,14 @@
                 data: {
                     title: "Daten",
                     reset: { label: "Einstellungen zurücksetzen", desc: "Setzt alle Einstellungen auf Standard zurück", button: "Zurücksetzen" }
+                },
+                library: {
+                    skins: "Skins",
+                    currentSkin: "Aktueller Skin",
+                    currentSkinDesc: "Skin, der aktuell auf deinem Minecraft-Konto angewendet ist",
+                    uploadTitle: "Ziehe einen PNG-Skin hierher",
+                    uploadSub: "oder klicke zum Durchsuchen — 64×32 oder 64×64",
+                    empty: "Keine Skins in deiner Bibliothek. Importiere einen!"
                 },
                 about: { version: "Launcher-Version", licenses: "Lizenzen" },
                 unsaved: { title: "Nicht gespeicherte Änderungen", body: "Es gibt nicht gespeicherte Änderungen.", discard: "Änderungen verwerfen" },
@@ -179,7 +203,7 @@
             common: { save: "Guardar", cancel: "Cancelar" },
             settings: {
                 title: "Ajustes",
-                nav: { game: "Juego", interface: "Interfaz", account: "Cuenta", about: "Acerca de" },
+                nav: { game: "Juego", interface: "Interfaz", account: "Cuenta", library: "Biblioteca", about: "Acerca de" },
                 performance: { title: "Rendimiento" },
                 ram: { label: "RAM asignada", desc: "Memoria máxima para Minecraft" },
                 launch: {
@@ -199,6 +223,14 @@
                 data: {
                     title: "Datos",
                     reset: { label: "Restablecer ajustes", desc: "Restaura todos los ajustes a sus valores predeterminados", button: "Restablecer" }
+                },
+                library: {
+                    skins: "Skins",
+                    currentSkin: "Skin actual",
+                    currentSkinDesc: "Skin actualmente aplicado a tu cuenta de Minecraft",
+                    uploadTitle: "Arrastra un skin PNG aquí",
+                    uploadSub: "o haz clic para explorar — 64×32 o 64×64",
+                    empty: "No hay skins en tu biblioteca. ¡Importa uno!"
                 },
                 about: { version: "Versión del launcher", licenses: "Licencias" },
                 unsaved: { title: "Cambios sin guardar", body: "Tienes cambios sin guardar.", discard: "Descartar cambios" },

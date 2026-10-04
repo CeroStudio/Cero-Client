@@ -43,6 +43,18 @@ func main() {
 	mux.HandleFunc("PATCH /api/messages/{id}", authMiddleware(handleMessagesEdit))
 	mux.HandleFunc("DELETE /api/messages/{id}", authMiddleware(handleMessagesDelete))
 
+	mux.HandleFunc("POST /api/uploads", authMiddleware(handleUploadCreate))
+	mux.HandleFunc("GET /api/uploads/quota", authMiddleware(handleUploadQuota))
+	mux.HandleFunc("GET /api/uploads/{name}", authMiddleware(handleUploadGet))
+
+	mux.HandleFunc("GET /api/library/skins", authMiddleware(handleLibrarySkinsList))
+	mux.HandleFunc("POST /api/library/skins", authMiddleware(handleLibrarySkinsUpload))
+	mux.HandleFunc("POST /api/library/skins/{id}/apply", authMiddleware(handleLibrarySkinsApply))
+	mux.HandleFunc("PATCH /api/library/skins/{id}", authMiddleware(handleLibrarySkinsUpdate))
+	mux.HandleFunc("DELETE /api/library/skins/{id}", authMiddleware(handleLibrarySkinsDelete))
+	mux.HandleFunc("GET /api/library/skins/quota", authMiddleware(handleLibrarySkinsQuota))
+	mux.HandleFunc("GET /api/library/skins/{id}/file", authMiddleware(handleLibrarySkinsFile))
+
 	var handler http.Handler = mux
 	handler = messagesRateLimit(handler)
 	handler = generalAPIRateLimit(handler)
@@ -58,8 +70,8 @@ func main() {
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      handler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 120 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -71,7 +83,7 @@ func main() {
 			log.Fatalf("listen: %v", err)
 		}
 	}()
-	
+
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGINT,
