@@ -5,6 +5,13 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/github/stars/CeroWorks/Cero-Client?style=flat" alt="Stars">
+  <img src="https://img.shields.io/github/license/CeroWorks/Cero-Client?style=flat" alt="License">
+  <img src="https://img.shields.io/badge/Minecraft-1.7.10--26.3-green" alt="Versions">
+  <img src="https://img.shields.io/github/v/release/CeroWorks/Cero-Client?style=flat" alt="Release">
+</p>
+
+<p align="center">
   <img src="../../screenshots/launcher1.png" width="800" alt="Lanceur CeroClient">
 </p>
 
@@ -40,10 +47,12 @@
     - [x] Télécharger le client
     - [x] Télécharger les assets
     - [x] Démarrer le client
-    - [ ] Installer Fabric
-    - [ ] Installer Forge
-    - [ ] Démarrer Fabric
+    - [x] Installer Fabric
+    - [x] Installer Forge
+    - [x] Installer Quilt
+    - [x] Démarrer Fabric
     - [ ] Démarrer Forge
+    - [x] Démarrer Quilt
 - [x] **Connexion au compte Microsoft**
 - [x] Créer un installateur
 - [x] Créer un système de mise à jour (Updater)
@@ -53,7 +62,7 @@
     - [ ] Inviter dans son monde
     - [x] Ajouter un ami
     - [x] Supprimer un ami
-- [ ] Ajouter le support d'Android
+- [ ] Ajouter le support d'Android `Très dur (pour moi)`
 - [x] Support multilingue
 
 ---
