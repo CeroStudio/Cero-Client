@@ -12,6 +12,8 @@ const DEFAULT_IMAGE: &str = "ghcr.io/cerostudio/ceroclient-server";
 const DEFAULT_TAG: &str = "main";
 const DEFAULT_NAME: &str = "ceroclient-server";
 const DEFAULT_PORT: u16 = 3134;
+const DEFAULT_DATA_VOLUME: &str = "ceroclient-data";
+const DEFAULT_DATA_MOUNT: &str = "/data";
 
 const FAST_CRASH_WINDOW: Duration = Duration::from_secs(15);
 const FAST_CRASH_LIMIT: u32 = 3;
@@ -38,6 +40,12 @@ enum Event {
     Ready(Option<String>),
 }
 
+#[derive(Clone)]
+enum DataVol {
+    Bind(PathBuf),
+    Named(String),
+}
+
 struct Config {
     docker_bin: String,
     image: String,
@@ -51,6 +59,8 @@ struct Config {
     registry_user: String,
     registry_pass: String,
     assume_current: bool,
+    data: Option<DataVol>,
+    data_mount: String,
     args: Vec<String>,
 }
 
@@ -78,6 +88,22 @@ fn main() {
 fn run(cfg: Config) -> Result<(), String> {
     let cfg = Arc::new(cfg);
     docker_login(&cfg)?;
+
+    match &cfg.data {
+        Some(DataVol::Bind(dir)) => log(&format!(
+            "données sauvegardées dans {} (montées sur {})",
+            dir.display(),
+            cfg.data_mount
+        )),
+        Some(DataVol::Named(vol)) => log(&format!(
+            "données sauvegardées dans le volume docker \"{}\" (monté sur {})",
+            vol, cfg.data_mount
+        )),
+        None => log(
+            "persistance des données désactivée : tout ce qui est écrit dans le \
+             conteneur sera perdu à la prochaine mise à jour",
+        ),
+    }
 
     let (tx, rx) = channel::<Event>();
     {
@@ -313,6 +339,28 @@ fn start(
             .arg("--name")
             .arg(&cfg.name)
             .arg("-i");
+
+        match &cfg.data {
+            Some(DataVol::Bind(dir)) => {
+                if let Err(e) = fs::create_dir_all(dir) {
+                    return Err(format!(
+                        "création du répertoire de données {} impossible : {}",
+                        dir.display(),
+                        e
+                    ));
+                }
+                run_cmd
+                    .arg("-v")
+                    .arg(format!("{}:{}", dir.display(), cfg.data_mount));
+            }
+            Some(DataVol::Named(vol)) => {
+                run_cmd
+                    .arg("-v")
+                    .arg(format!("{}:{}", vol, cfg.data_mount));
+            }
+            None => {}
+        }
+
         if cfg.port != 0 {
             run_cmd
                 .arg("-p")
@@ -686,6 +734,8 @@ fn parse_args() -> Result<Config, String> {
     let mut registry_user = String::new();
     let mut registry_pass = String::new();
     let mut assume_current = false;
+    let mut data: Option<String> = Some(DEFAULT_DATA_VOLUME.to_string());
+    let mut data_mount = DEFAULT_DATA_MOUNT.to_string();
     let mut server_args: Vec<String> = Vec::new();
     let mut i = 0usize;
     while i < argv.len() {
@@ -700,7 +750,7 @@ fn parse_args() -> Result<Config, String> {
         }
         let (raw_name, inline) = split_eq(&arg);
         let name_opt = raw_name.trim_start_matches('-').to_string();
-        let is_flag = name_opt == "assume-current" || name_opt == "no-port";
+        let is_flag = name_opt == "assume-current" || name_opt == "no-port" || name_opt == "no-data";
         let value = if let Some(v) = inline {
             Some(v)
         } else if is_flag {
@@ -741,6 +791,15 @@ fn parse_args() -> Result<Config, String> {
             "registry-user" => registry_user = v,
             "registry-pass" => registry_pass = v,
             "assume-current" => assume_current = v == "true" || v == "1",
+            "data" => {
+                data = if v.is_empty() { None } else { Some(v) };
+            }
+            "data-mount" => data_mount = v,
+            "no-data" => {
+                if v == "true" || v == "1" {
+                    data = None;
+                }
+            }
             other => return Err(format!("option inconnue : {}", other)),
         }
         i += 1;
@@ -748,6 +807,16 @@ fn parse_args() -> Result<Config, String> {
     if registry_pass.is_empty() {
         registry_pass = std::env::var("CEROBOOT_REGISTRY_PASSWORD").unwrap_or_default();
     }
+    if data_mount.trim().is_empty() {
+        data_mount = DEFAULT_DATA_MOUNT.to_string();
+    }
+    let data = data.map(|v| {
+        if v.contains('/') || v.contains('\\') || v == "." || v == ".." {
+            DataVol::Bind(abs_path(&v))
+        } else {
+            DataVol::Named(v)
+        }
+    });
     Ok(Config {
         docker_bin,
         image,
@@ -761,6 +830,8 @@ fn parse_args() -> Result<Config, String> {
         registry_user,
         registry_pass,
         assume_current,
+        data,
+        data_mount,
         args: server_args,
     })
 }
@@ -778,6 +849,11 @@ fn usage() {
     eprintln!("                        ex. -docker-arg=-v -docker-arg=./data:/data)");
     eprintln!("  -port PORT            port publié en <PORT>:<PORT>/tcp (défaut : {})", DEFAULT_PORT);
     eprintln!("  -no-port              ne publie aucun port par défaut (utiliser -docker-arg -p à la place)");
+    eprintln!("  -data CIBLE           sauvegarde des données du conteneur, montées sur -data-mount :");
+    eprintln!("                        nom simple => volume Docker nommé (défaut : {})", DEFAULT_DATA_VOLUME);
+    eprintln!("                        chemin     => dossier de l'hôte (ex. -data ./monde)");
+    eprintln!("                        -data= (vide) ou -no-data pour désactiver");
+    eprintln!("  -data-mount CHEMIN    point de montage dans le conteneur (défaut : {})", DEFAULT_DATA_MOUNT);
     eprintln!("  -interval DUREE       intervalle entre deux vérifications (défaut : 30s)");
     eprintln!("  -stop-timeout DUREE   délai accordé à `docker stop` (défaut : 30s)");
     eprintln!("  -state FICHIER        fichier d'état (défaut : .ceroboot.json)");
