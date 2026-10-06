@@ -60,3 +60,8 @@ a, button, input, select, textarea, canvas, img,
 .ms-btn:active {
   transform: translateY(0);
 }
+
+.logo-wrap.logo-lg { width: 10rem; height: 10rem; }
+@media (min-width: 768px) {
+  .logo-wrap.logo-lg { width: 12rem; height: 12rem; }
+}

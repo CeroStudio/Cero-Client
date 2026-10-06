@@ -10,41 +10,44 @@
     <script src="../js/ui/grain.js" defer></script>
     <link rel="stylesheet" href="../style/login.css">
     <link rel="icon" href="../favicon.ico" type="image/x-icon">
-    
+
 </head>
 <body class="bg-[var(--bg-color)] text-[var(--text-main)] overflow-hidden relative h-screen app-drag">
 
-    <canvas id="grainCanvas"></canvas>
+<canvas id="grainCanvas"></canvas>
 
-    <% import "../components/header.html" %>
+<% import "../components/header.html" %>
 
-    <main class="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-14">
+<main class="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-14">
 
-        <div class="fade-up mb-10">
-            <img src="../favicon.ico" alt="Cero Logo"
-                 class="w-40 h-40 md:w-48 md:h-48 rounded-3xl shadow-2xl shadow-black/20">
+    <div class="fade-up mb-10">
+        <div class="logo-wrap logo-lg" aria-label="Cero Logo">
+            <div class="logo-tint"></div>
+            <div class="logo-shade"></div>
+            <img src="../style/img/logo-highlight.png" alt="" class="logo-highlight" draggable="false">
         </div>
+    </div>
 
-        <div class="fade-up delay-1 text-center mb-8">
-            <h1 class="text-2xl font-bold tracking-tight mb-2">Bienvenue</h1>
-            <p class="text-[var(--text-muted)] text-sm">Connectez-vous à votre compte Minecraft.</p>
-        </div>
+    <div class="fade-up delay-1 text-center mb-8">
+        <h1 class="text-2xl font-bold tracking-tight mb-2">Bienvenue</h1>
+        <p class="text-[var(--text-muted)] text-sm">Connectez-vous à votre compte Minecraft.</p>
+    </div>
 
-        <div class="fade-up delay-2 w-full max-w-sm">
-            <button class="ms-btn w-full flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21">
-                    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-                    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-                </svg>
-                <span class="font-semibold text-sm">Se connecter avec Microsoft</span>
-            </button>
-        </div>
-    </main>
+    <div class="fade-up delay-2 w-full max-w-sm">
+        <button class="ms-btn w-full flex items-center justify-center gap-3 py-3.5 px-6 rounded-xl cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+            <span class="font-semibold text-sm">Se connecter avec Microsoft</span>
+        </button>
+    </div>
+</main>
 
-    <%import "../components/footer.html"%>
+<%import "../components/footer.html"%>
 
-    <script src="../js/login.js"></script>
+<script src="../js/login.js"></script>
 </body>
 </html>
