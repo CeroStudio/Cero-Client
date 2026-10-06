@@ -1,6 +1,9 @@
+let loginInProgress = false;
+
 async function loginWithMicrosoft() {
     const btnSpan = document.querySelector('.ms-btn span');
-    if (!btnSpan) return;
+    if (!btnSpan || loginInProgress) return;
+    loginInProgress = true;
 
     const originalText = btnSpan.innerText;
     btnSpan.innerText = "Connexion en cours...";
@@ -14,6 +17,7 @@ async function loginWithMicrosoft() {
         console.error("[Login] Microsoft Auth Error:", e);
         btnSpan.innerText = "Échec — réessayez";
         setTimeout(() => { btnSpan.innerText = originalText; }, 2500);
+        loginInProgress = false;
     }
 }
 

@@ -14,6 +14,8 @@
   #include <unistd.h>
   #include <sys/socket.h>
   #include <sys/types.h>
+  #include <sys/select.h>
+  #include <sys/time.h>
   #include <netinet/in.h>
   #include <arpa/inet.h>
   #include <curl/curl.h>
@@ -72,6 +74,8 @@ static char* read_file(const char* path) {
     return buf;
 }
 
+#define OAUTH_WAIT_TIMEOUT_SEC 180
+
 static char* wait_for_oauth_code(void) {
 #ifdef _WIN32
     WSADATA wsa;
@@ -100,6 +104,25 @@ static char* wait_for_oauth_code(void) {
         close(srv);
 #endif
         return NULL;
+    }
+
+    {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(srv, &rfds);
+        struct timeval tv;
+        tv.tv_sec  = OAUTH_WAIT_TIMEOUT_SEC;
+        tv.tv_usec = 0;
+        int sel = select((int)srv + 1, &rfds, NULL, NULL, &tv);
+        if (sel <= 0) {
+            log_msg("error", "OAuth: timeout en attendant le navigateur\n");
+#ifdef _WIN32
+            closesocket(srv); WSACleanup();
+#else
+            close(srv);
+#endif
+            return NULL;
+        }
     }
 
 #ifdef _WIN32
@@ -424,7 +447,7 @@ static void open_browser(const char* url) {
     ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 #else
     char cmd[2048];
-    
+
 #ifdef __APPLE__
     snprintf(cmd, sizeof(cmd), "open '%s' >/dev/null 2>&1 &", url);
 #else
