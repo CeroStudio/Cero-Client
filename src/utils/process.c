@@ -54,7 +54,9 @@ int process_run(const char* exe, const char* const argv[]) {
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    if (!CreateProcessA(exe, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    DWORD flags = GetConsoleWindow() ? 0 : CREATE_NO_WINDOW;
+
+    if (!CreateProcessA(exe, cmdline, NULL, NULL, TRUE, flags, NULL, NULL, &si, &pi)) {
         log_msg("error", "CreateProcess failed: %lu\n", GetLastError());
         return -1;
     }
