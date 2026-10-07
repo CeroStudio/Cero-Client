@@ -51,7 +51,7 @@
 	- [x] Install Forge
     - [x] Install Quilt
 	- [x] Start Fabric
-	- [ ] Start Forge
+	- [x] Start Forge
     - [x] Start Quilt
 - [x] **Connect Microsoft Account**
 - [x] Create an Installer
