@@ -1,7 +1,7 @@
 import os
 import re
 
-LAUNCHER_VERSION = "4.2.1"
+LAUNCHER_VERSION = "4.3.1"
 
 ASSETS_ROOT = "assets"
 DIST_ROOT   = "dist"

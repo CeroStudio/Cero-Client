@@ -384,8 +384,22 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
         char natives_dir[MAX_PATH_SIZE];
         snprintf(natives_dir, sizeof(natives_dir), "%s/versions/%s/natives", instance_dir, mc_version);
 
+        char jar_version_name[256];
+        {
+            const char* base = strrchr(client_jar, '/');
+#ifdef _WIN32
+            const char* bs = strrchr(client_jar, '\\');
+            if (bs && (!base || bs > base)) base = bs;
+#endif
+            base = base ? base + 1 : client_jar;
+            snprintf(jar_version_name, sizeof(jar_version_name), "%s", base);
+            size_t bl = strlen(jar_version_name);
+            if (bl > 4 && strcmp(jar_version_name + bl - 4, ".jar") == 0)
+                jar_version_name[bl - 4] = '\0';
+        }
+
         for (int i = 0; i < raw_jvm_n; i++) {
-            forge_resolve_placeholder(instance_dir, classpath, natives_dir, version_id_for_args,
+            forge_resolve_placeholder(instance_dir, classpath, natives_dir, jar_version_name,
                                       raw_jvm[i], jvm_buf[i], sizeof(jvm_buf[i]));
             extra_jvm[i] = jvm_buf[i];
         }
