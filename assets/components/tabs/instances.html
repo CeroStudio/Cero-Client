@@ -1,62 +1,713 @@
-            <div id="appTab-instances" class="app-tab-panel flex-1 flex flex-col gap-4 overflow-hidden" style="display:none">
-                <div class="card rounded-2xl p-5 flex flex-col gap-4 fade-up">
-                    <div>
-                        <h2 class="text-sm font-semibold">Test du système d'instances (C)</h2>
-                        <p class="text-xs text-[var(--text-muted)] mt-1">
-                            Crée puis lance directement une instance jetable pour chaque loader,
-                            pour valider le pipeline C sans passer par un vrai écran de création.
-                        </p>
-                    </div>
+<div id="appTab-instances" class="app-tab-panel flex-1 flex flex-col gap-4 overflow-hidden" style="display:none">
+    <div class="inst-toolbar fade-up">
+        <div class="min-w-0">
+            <h2 class="inst-title" data-i18n="instances.title">Mes instances</h2>
+            <p class="inst-subtitle" data-i18n="instances.subtitle">Chaque instance a sa propre version, son loader, ses mods et ses mondes.</p>
+        </div>
+        <button id="instNewBtn" class="btn-primary nodrag" type="button" onclick="Cero.instances.openCreate()">
+            + <span data-i18n="instances.new">Nouvelle instance</span>
+        </button>
+    </div>
 
-                    <div class="flex flex-wrap gap-3">
-                        <button class="btn-primary" style="font-size:12px" onclick="testInstanceLaunch('fabric','1.18.2','')">
-                            Tester Fabric 1.18.2
-                        </button>
-                        <button class="btn-primary" style="font-size:12px" onclick="testInstanceLaunch('forge','1.20.1','')">
-                            Tester Forge 1.20.1
-                        </button>
-                        <button class="btn-primary" style="font-size:12px" onclick="testInstanceLaunch('quilt','1.18.2','')">
-                            Tester Quilt 1.18.2
-                        </button>
-                    </div>
+    <div id="instGrid" class="inst-grid fade-up delay-1"></div>
 
-                    <div id="instanceTestLog" class="text-xs font-mono rounded-xl p-3 flex-1 overflow-auto"
-                         style="background:var(--bg-secondary,rgba(0,0,0,0.2)); white-space:pre-wrap; min-height:160px;">
-Prêt. Choisis un loader ci-dessus.
-                    </div>
-                </div>
+    <div id="instEmpty" class="inst-empty fade-up delay-1" style="display:none">
+        <div class="inst-empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" stroke-linejoin="round"/>
+                <path d="M3 8l9 5 9-5M12 13v8" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <p class="text-sm font-bold" data-i18n="instances.empty">Aucune instance pour le moment</p>
+        <p class="text-xs text-[var(--text-muted)]" data-i18n="instances.emptyHint">Crée ta première instance pour jouer avec un loader.</p>
+    </div>
+</div>
+
+<div id="instCreateModal" class="modal-backdrop">
+    <div class="modal modal-wide">
+        <div class="modal-header">
+            <span class="modal-title" data-i18n="instances.createTitle">Nouvelle instance</span>
+            <button class="wc-btn" type="button" onclick="Cero.instances.closeCreate()" aria-label="Fermer" data-i18n-aria="a11y.close">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+                    <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body inst-form">
+            <div class="inst-field">
+                <label class="inst-label" for="instNameInput" data-i18n="instances.name">Nom</label>
+                <input id="instNameInput" class="modal-input" type="text" maxlength="60" autocomplete="off"
+                       placeholder="Mon instance" data-i18n-placeholder="instances.namePlaceholder">
             </div>
 
+            <div class="inst-field">
+                <span class="inst-label" data-i18n="instances.loader">Loader</span>
+                <div id="instLoaderTabs" class="loader-tabs inst-loader-tabs"></div>
+            </div>
+
+            <div class="inst-field">
+                <label class="inst-label" for="instMcSelect" data-i18n="instances.gameVersion">Version du jeu</label>
+                <select id="instMcSelect" class="modal-input inst-select"></select>
+                <label class="inst-check">
+                    <input id="instShowAll" type="checkbox">
+                    <span data-i18n="instances.showSnapshots">Afficher snapshots et anciennes versions</span>
+                </label>
+            </div>
+
+            <div id="instLoaderVerField" class="inst-field" style="display:none">
+                <label class="inst-label" for="instLoaderSelect" data-i18n="instances.loaderVersion">Version du loader</label>
+                <select id="instLoaderSelect" class="modal-input inst-select"></select>
+            </div>
+
+            <p id="instCreateError" class="modal-error"></p>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-ghost" type="button" onclick="Cero.instances.closeCreate()" data-i18n="common.cancel">Annuler</button>
+            <button id="instCreateSubmit" class="btn-primary" type="button" onclick="Cero.instances.submitCreate()" data-i18n="instances.create">Créer</button>
+        </div>
+    </div>
+</div>
+
+<div id="instEditModal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" data-i18n="instances.editTitle">Modifier l'instance</span>
+            <button class="wc-btn" type="button" onclick="Cero.instances.closeEdit()" aria-label="Fermer" data-i18n-aria="a11y.close">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+                    <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body inst-form">
+            <div class="inst-field">
+                <label class="inst-label" for="instEditName" data-i18n="instances.name">Nom</label>
+                <input id="instEditName" class="modal-input" type="text" maxlength="60" autocomplete="off">
+            </div>
+
+            <div class="inst-field">
+                <div class="inst-label-row">
+                    <span class="inst-label" data-i18n="instances.ram">Mémoire (RAM)</span>
+                    <span id="instRamValue" class="inst-ram-value"></span>
+                </div>
+                <input id="instRamRange" class="inst-range" type="range" min="1024" max="8192" step="512" value="4096">
+                <label class="inst-check">
+                    <input id="instRamDefault" type="checkbox" checked>
+                    <span data-i18n="instances.ramUseDefault">Utiliser la valeur par défaut</span>
+                </label>
+            </div>
+
+            <p id="instEditError" class="modal-error"></p>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-ghost" type="button" onclick="Cero.instances.closeEdit()" data-i18n="common.cancel">Annuler</button>
+            <button id="instEditSubmit" class="btn-primary" type="button" onclick="Cero.instances.submitEdit()" data-i18n="common.save">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<div id="instDeleteModal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" data-i18n="instances.deleteTitle">Supprimer l'instance</span>
+        </div>
+        <div class="modal-body">
+            <p id="instDeleteText" class="text-xs text-[var(--text-muted)]" style="line-height:1.6"></p>
+            <p id="instDeleteError" class="modal-error"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost" type="button" onclick="Cero.instances.closeDelete()" data-i18n="common.cancel">Annuler</button>
+            <button id="instDeleteSubmit" class="btn-remove" type="button" onclick="Cero.instances.submitDelete()" data-i18n="instances.delete">Supprimer</button>
+        </div>
+    </div>
+</div>
+
 <script>
-(function() {
-    function logLine(msg) {
-        const el = document.getElementById('instanceTestLog');
-        if (!el) return;
-        const time = new Date().toLocaleTimeString();
-        el.textContent += `\n[${time}] ${msg}`;
-        el.scrollTop = el.scrollHeight;
-    }
+    (function (window) {
+        "use strict";
+        const Cero = window.Cero = window.Cero || {};
+        if (Cero.instances) return; /* déjà chargé (script référencé deux fois) */
 
-    window.testInstanceLaunch = async function(loader, mcVersion, loaderVersion) {
-        const name = `Test ${loader} ${mcVersion}`;
-        logLine(`Création de l'instance "${name}"...`);
-        try {
-            const instanceId = await window.create_instance(name, mcVersion, loader, loaderVersion || '');
-            logLine(`Instance créée -> id ${instanceId}`);
+        const LOADERS = [
+            { id: 'vanilla',  label: 'Vanilla'  },
+            { id: 'fabric',   label: 'Fabric'   },
+            { id: 'forge',    label: 'Forge'    },
+            { id: 'neoforge', label: 'NeoForge' },
+            { id: 'quilt',    label: 'Quilt'    },
+        ];
 
-            if (window.Cero && window.Cero.modules && window.Cero.modules.overlayShow) {
-                window.Cero.modules.overlayShow(`${mcVersion} (${loader})`);
+        const state = {
+            instances: [],
+            manifest: null,
+            systemRam: 0,
+            gameRunning: false,
+            launching: false,
+            editId: null,
+            deleteId: null,
+            create: { loader: 'vanilla', token: 0, loaderReady: true, submitting: false },
+        };
+
+        /* ------------------------------------------------------------ helpers */
+
+        const $ = (id) => document.getElementById(id);
+
+        function tr(key, fallback, vars) {
+            let s = window.t ? window.t(key, fallback) : fallback;
+            if (vars) {
+                Object.keys(vars).forEach((k) => { s = s.split('{' + k + '}').join(vars[k]); });
             }
+            return s;
+        }
 
-            logLine(`Lancement de l'instance ${instanceId}...`);
-            await window.launch_instance(instanceId);
-            logLine(`launch_instance() renvoyé sans erreur immédiate (le vrai suivi passe par la barre de progression).`);
-        } catch (e) {
-            logLine(`Erreur: ${e && e.message ? e.message : e}`);
-            if (window.Cero && window.Cero.modules && window.Cero.modules.overlayError) {
-                window.Cero.modules.overlayError(e && e.message ? e.message : String(e));
+        function esc(s) {
+            return String(s).replace(/[&<>"']/g, (c) => (
+                { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+            ));
+        }
+
+        function errText(e) {
+            if (e && e.message) return e.message;
+            return typeof e === 'string' ? e : JSON.stringify(e);
+        }
+
+        function parseMaybeJson(v) {
+            if (typeof v === 'string') {
+                try { return JSON.parse(v); } catch (_) { return v; }
+            }
+            return v;
+        }
+
+        function loaderLabel(id) {
+            const l = LOADERS.find((x) => x.id === id);
+            return l ? l.label : id;
+        }
+
+        function fmtRam(mb) {
+            const unit = tr('instances.unitGb', 'Go');
+            if (mb < 1024) return mb + ' Mo';
+            const gb = mb / 1024;
+            return (Number.isInteger(gb) ? gb : gb.toFixed(1)) + ' ' + unit;
+        }
+
+        function fmtDate(sec) {
+            try {
+                const lang = Cero.i18n && Cero.i18n.getLang ? Cero.i18n.getLang() : undefined;
+                return new Date(sec * 1000).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' });
+            } catch (_) {
+                return new Date(sec * 1000).toLocaleDateString();
             }
         }
-    };
-})();
+
+        /* dotted version compare, descending helper: > 0 if a is newer than b */
+        function cmpVersion(a, b) {
+            const pa = String(a).split(/[.\-]/).map((x) => parseInt(x, 10));
+            const pb = String(b).split(/[.\-]/).map((x) => parseInt(x, 10));
+            const n = Math.max(pa.length, pb.length);
+            for (let i = 0; i < n; i++) {
+                const x = Number.isNaN(pa[i]) || pa[i] === undefined ? -1 : pa[i];
+                const y = Number.isNaN(pb[i]) || pb[i] === undefined ? -1 : pb[i];
+                if (x !== y) return x > y ? 1 : -1;
+            }
+            return 0;
+        }
+
+        function openModal(id)  { const m = $(id); if (m) m.classList.add('active'); }
+        function closeModal(id) { const m = $(id); if (m) m.classList.remove('active'); }
+        function setText(id, txt) { const el = $(id); if (el) el.textContent = txt || ''; }
+
+        /* --------------------------------------------------------------- list */
+
+        async function refresh() {
+            try {
+                const list = parseMaybeJson(await window.list_instances());
+                state.instances = Array.isArray(list) ? list : [];
+            } catch (e) {
+                console.error('[instances] list failed', e);
+                state.instances = [];
+            }
+            render();
+        }
+
+        function sortedInstances() {
+            return state.instances.slice().sort((a, b) => {
+                const lp = (b.lastPlayed || 0) - (a.lastPlayed || 0);
+                if (lp !== 0) return lp;
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
+        }
+
+        function playLabel() {
+            if (state.gameRunning) return tr('instances.running', 'En jeu');
+            if (state.launching)   return tr('instances.launching', 'Lancement...');
+            return tr('instances.play', 'Jouer');
+        }
+
+        function cardHtml(inst) {
+            const loader = inst.loader || 'vanilla';
+            const initial = esc((Array.from(inst.name || '?')[0] || '?').toUpperCase());
+            const loaderTxt = loader === 'vanilla'
+                ? loaderLabel('vanilla')
+                : loaderLabel(loader) + (inst.loaderVersion ? ' ' + inst.loaderVersion : '');
+
+            const tags = [
+                `<span class="inst-badge inst-badge--${esc(loader)}">${esc(loaderTxt)}</span>`,
+                inst.ramMb > 0 ? `<span class="inst-badge">${esc(fmtRam(inst.ramMb))}</span>` : '',
+            ].join('');
+
+            const last = inst.lastPlayed > 0
+                ? tr('instances.lastPlayed', 'Dernière partie : {date}', { date: fmtDate(inst.lastPlayed) })
+                : tr('instances.never', 'Jamais lancée');
+
+            const busy = state.gameRunning || state.launching;
+
+            return `
+            <article class="inst-card card rounded-2xl" data-id="${esc(inst.id)}">
+                <div class="inst-card-top">
+                    <div class="inst-icon inst-icon--${esc(loader)}">${initial}</div>
+                    <div class="inst-meta">
+                        <h3 class="inst-name" title="${esc(inst.name)}">${esc(inst.name)}</h3>
+                        <p class="inst-sub">Minecraft ${esc(inst.mcVersion)}</p>
+                    </div>
+                    <div class="inst-actions">
+                        <button class="wc-btn nodrag" type="button" data-act="edit"
+                                title="${esc(tr('instances.edit', 'Modifier'))}" aria-label="${esc(tr('instances.edit', 'Modifier'))}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="wc-btn inst-del nodrag" type="button" data-act="delete"
+                                title="${esc(tr('instances.delete', 'Supprimer'))}" aria-label="${esc(tr('instances.delete', 'Supprimer'))}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="inst-tags">${tags}</div>
+                <p class="inst-last">${esc(last)}</p>
+                <button class="inst-play nodrag" type="button" data-act="play" ${busy ? 'disabled' : ''}>
+                    ${state.gameRunning || state.launching ? '' : '▶ '}${esc(playLabel())}
+                </button>
+            </article>`;
+        }
+
+        function render() {
+            const grid = $('instGrid');
+            const empty = $('instEmpty');
+            if (!grid || !empty) return;
+
+            const list = sortedInstances();
+            grid.style.display  = list.length ? '' : 'none';
+            empty.style.display = list.length ? 'none' : '';
+            grid.innerHTML = list.map(cardHtml).join('');
+        }
+
+        function onGridClick(e) {
+            const btn = e.target.closest('[data-act]');
+            if (!btn) return;
+            const card = btn.closest('.inst-card');
+            if (!card) return;
+            const id = card.getAttribute('data-id');
+
+            switch (btn.getAttribute('data-act')) {
+                case 'play':   play(id); break;
+                case 'edit':   openEdit(id); break;
+                case 'delete': openDelete(id); break;
+            }
+        }
+
+        /* ------------------------------------------------------------- launch */
+
+        async function play(id) {
+            if (state.gameRunning || state.launching) return;
+            const inst = state.instances.find((i) => i.id === id);
+            if (!inst || !window.launch_instance) return;
+
+            state.launching = true;
+            render();
+
+            const label = inst.mcVersion + (inst.loader && inst.loader !== 'vanilla' ? ' · ' + loaderLabel(inst.loader) : '');
+            if (Cero.modules && Cero.modules.overlayShow) Cero.modules.overlayShow(label);
+
+            try {
+                await window.launch_instance(id);
+            } catch (e) {
+                state.launching = false;
+                render();
+                const msg = errText(e);
+                if (msg === 'already_running') {
+                    if (Cero.modules && Cero.modules.overlayHide) Cero.modules.overlayHide();
+                } else if (Cero.modules && Cero.modules.overlayError) {
+                    Cero.modules.overlayError(msg);
+                }
+            }
+        }
+
+        function wrapHook(name, before) {
+            const prev = window[name];
+            window[name] = function () {
+                try { before.apply(this, arguments); } catch (e) { console.error('[instances]', e); }
+                return typeof prev === 'function' ? prev.apply(this, arguments) : undefined;
+            };
+        }
+
+        function installGameHooks() {
+            wrapHook('_onGameStart', function () {
+                state.gameRunning = true;
+                state.launching = false;
+                render();
+            });
+            wrapHook('_onGameStop', function () {
+                state.gameRunning = false;
+                state.launching = false;
+                refresh(); /* last-played changed */
+            });
+            wrapHook('onLaunchError', function () {
+                state.launching = false;
+                render();
+            });
+        }
+
+        /* ------------------------------------------------------------- create */
+
+        function setCreateError(msg) { setText('instCreateError', msg); }
+
+        function updateCreateBtn() {
+            const c = state.create;
+            const btn = $('instCreateSubmit');
+            if (!btn) return;
+            const mcOk = !!$('instMcSelect').value;
+            btn.disabled = !(mcOk && c.loaderReady) || c.submitting;
+        }
+
+        function renderLoaderTabs() {
+            const wrap = $('instLoaderTabs');
+            wrap.innerHTML = LOADERS.map((l) =>
+                `<button type="button" class="loader-tab${l.id === state.create.loader ? ' active' : ''}" data-loader="${l.id}">${esc(l.label)}</button>`
+            ).join('');
+        }
+
+        async function ensureManifest() {
+            if (state.manifest) return true;
+            try {
+                const m = parseMaybeJson(await window.get_mc_versions());
+                if (!m || !Array.isArray(m.versions)) throw new Error('bad manifest');
+                state.manifest = m;
+                return true;
+            } catch (e) {
+                console.error('[instances] manifest', e);
+                return false;
+            }
+        }
+
+        function populateMcVersions() {
+            const sel = $('instMcSelect');
+            const showAll = $('instShowAll').checked;
+            const prev = sel.value;
+            const m = state.manifest;
+
+            const versions = (m ? m.versions : []).filter((v) => showAll || v.type === 'release');
+            sel.innerHTML = versions.map((v) => `<option value="${esc(v.id)}">${esc(v.id)}</option>`).join('');
+
+            const latest = m && m.latest ? m.latest.release : '';
+            if (prev && versions.some((v) => v.id === prev)) sel.value = prev;
+            else if (latest && versions.some((v) => v.id === latest)) sel.value = latest;
+        }
+
+        async function fetchLoaderVersions(loader, mc) {
+            const fn = window['get_' + loader + '_versions'];
+            if (typeof fn !== 'function') throw new Error('unsupported');
+            const r = parseMaybeJson(await fn(mc));
+
+            if (loader === 'fabric' || loader === 'quilt') {
+                return (Array.isArray(r) ? r : [])
+                    .filter((x) => x && x.loader && x.loader.version)
+                    .map((x) => ({ value: x.loader.version, tag: x.loader.stable ? tr('instances.stable', 'stable') : '' }));
+            }
+
+            if (loader === 'forge') {
+                const seen = new Map();
+                (Array.isArray(r) ? r : []).forEach((x) => {
+                    if (!x || !x.version) return;
+                    const prev = seen.get(x.version);
+                    seen.set(x.version, { value: x.version, rec: !!x.recommended || (prev && prev.rec) });
+                });
+                return Array.from(seen.values())
+                    .sort((a, b) => cmpVersion(b.value, a.value))
+                    .map((x) => ({ value: x.value, tag: x.rec ? tr('instances.recommended', 'recommandée') : '' }));
+            }
+
+            /* neoforge: { versions: [...], latest } */
+            const arr = r && Array.isArray(r.versions) ? r.versions : [];
+            return arr.slice().sort((a, b) => cmpVersion(b, a)).map((v) => ({ value: v, tag: '' }));
+        }
+
+        async function loadLoaderVersions() {
+            const c = state.create;
+            const token = ++c.token;
+            const field = $('instLoaderVerField');
+            const sel = $('instLoaderSelect');
+            const mc = $('instMcSelect').value;
+
+            setCreateError('');
+
+            if (c.loader === 'vanilla') {
+                field.style.display = 'none';
+                sel.innerHTML = '';
+                c.loaderReady = true;
+                updateCreateBtn();
+                return;
+            }
+
+            field.style.display = '';
+            c.loaderReady = false;
+            updateCreateBtn();
+
+            if (!mc) { sel.innerHTML = ''; return; }
+
+            sel.disabled = true;
+            sel.innerHTML = `<option value="">${esc(tr('instances.loadingVersions', 'Chargement...'))}</option>`;
+
+            let list;
+            try {
+                list = await fetchLoaderVersions(c.loader, mc);
+            } catch (e) {
+                if (token !== c.token) return;
+                console.error('[instances] loader versions', e);
+                sel.innerHTML = '';
+                setCreateError(tr('instances.fetchError', 'Impossible de charger les versions.'));
+                return;
+            }
+            if (token !== c.token) return;
+
+            if (!list.length) {
+                sel.innerHTML = '';
+                setCreateError(tr('instances.noLoaderVersion', '{loader} n\'est pas disponible pour Minecraft {version}.',
+                    { loader: loaderLabel(c.loader), version: mc }));
+                return;
+            }
+
+            const auto = `<option value="">${esc(tr('instances.loaderAuto', 'Automatique (dernière)'))}</option>`;
+            sel.innerHTML = auto + list.map((x) =>
+                `<option value="${esc(x.value)}">${esc(x.value + (x.tag ? '  ·  ' + x.tag : ''))}</option>`
+            ).join('');
+            sel.disabled = false;
+            sel.value = '';
+            c.loaderReady = true;
+            updateCreateBtn();
+        }
+
+        async function openCreate() {
+            const c = state.create;
+            c.loader = 'vanilla';
+            c.loaderReady = true;
+            c.submitting = false;
+            c.token++;
+
+            $('instNameInput').value = '';
+            $('instShowAll').checked = false;
+            $('instLoaderVerField').style.display = 'none';
+            setCreateError('');
+            renderLoaderTabs();
+            openModal('instCreateModal');
+
+            $('instMcSelect').innerHTML = `<option value="">${esc(tr('instances.loadingVersions', 'Chargement...'))}</option>`;
+            updateCreateBtn();
+
+            const ok = await ensureManifest();
+            if (!ok) {
+                $('instMcSelect').innerHTML = '';
+                setCreateError(tr('instances.fetchError', 'Impossible de charger les versions.'));
+                updateCreateBtn();
+                return;
+            }
+            populateMcVersions();
+            updateCreateBtn();
+            setTimeout(() => $('instNameInput').focus(), 50);
+        }
+
+        function closeCreate() { closeModal('instCreateModal'); state.create.token++; }
+
+        async function submitCreate() {
+            const c = state.create;
+            if (c.submitting) return;
+
+            const mc = $('instMcSelect').value;
+            if (!mc) { setCreateError(tr('instances.errVersion', 'Choisis une version du jeu.')); return; }
+            if (!c.loaderReady) return;
+
+            let name = $('instNameInput').value.trim();
+            if (!name) name = c.loader === 'vanilla' ? 'Minecraft ' + mc : loaderLabel(c.loader) + ' ' + mc;
+
+            const loaderVersion = c.loader === 'vanilla' ? '' : $('instLoaderSelect').value;
+
+            c.submitting = true;
+            updateCreateBtn();
+            setCreateError('');
+            try {
+                await window.create_instance(name, mc, c.loader, loaderVersion || '');
+                c.submitting = false;
+                closeCreate();
+                await refresh();
+            } catch (e) {
+                c.submitting = false;
+                updateCreateBtn();
+                setCreateError(tr('instances.errGeneric', 'Une erreur est survenue.') + ' (' + errText(e) + ')');
+            }
+        }
+
+        /* --------------------------------------------------------------- edit */
+
+        function ramCap() {
+            const total = state.systemRam;
+            if (!total) return 16384;
+            const cap = Math.max(2048, total - 2048);
+            return Math.floor(cap / 512) * 512;
+        }
+
+        function updateRamUi() {
+            const range = $('instRamRange');
+            const useDefault = $('instRamDefault').checked;
+            range.disabled = useDefault;
+            setText('instRamValue', useDefault ? tr('instances.ramDefault', 'Par défaut') : fmtRam(Number(range.value)));
+        }
+
+        function openEdit(id) {
+            const inst = state.instances.find((i) => i.id === id);
+            if (!inst) return;
+            state.editId = id;
+
+            const range = $('instRamRange');
+            range.max = String(ramCap());
+
+            $('instEditName').value = inst.name;
+            if (inst.ramMb > 0) {
+                range.value = String(Math.min(inst.ramMb, Number(range.max)));
+                $('instRamDefault').checked = false;
+            } else {
+                range.value = String(Math.min(4096, Number(range.max)));
+                $('instRamDefault').checked = true;
+            }
+            updateRamUi();
+            setText('instEditError', '');
+            openModal('instEditModal');
+            setTimeout(() => $('instEditName').focus(), 50);
+        }
+
+        function closeEdit() { closeModal('instEditModal'); state.editId = null; }
+
+        async function submitEdit() {
+            const inst = state.instances.find((i) => i.id === state.editId);
+            if (!inst) { closeEdit(); return; }
+
+            const name = $('instEditName').value.trim();
+            if (!name) { setText('instEditError', tr('instances.errName', 'Donne un nom à l\'instance.')); return; }
+
+            const newRam = $('instRamDefault').checked ? 0 : Number($('instRamRange').value);
+
+            const btn = $('instEditSubmit');
+            btn.disabled = true;
+            try {
+                if (name !== inst.name) await window.rename_instance(inst.id, name);
+                if (newRam !== (inst.ramMb || 0)) await window.set_instance_ram(inst.id, newRam);
+                closeEdit();
+                await refresh();
+            } catch (e) {
+                setText('instEditError', tr('instances.errGeneric', 'Une erreur est survenue.') + ' (' + errText(e) + ')');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        /* ------------------------------------------------------------- delete */
+
+        function openDelete(id) {
+            const inst = state.instances.find((i) => i.id === id);
+            if (!inst) return;
+            state.deleteId = id;
+            setText('instDeleteText', tr('instances.deleteConfirm',
+                'Supprimer « {name} » de la liste ? Les fichiers (mondes, mods) restent sur le disque.', { name: inst.name }));
+            setText('instDeleteError', '');
+            openModal('instDeleteModal');
+        }
+
+        function closeDelete() { closeModal('instDeleteModal'); state.deleteId = null; }
+
+        async function submitDelete() {
+            const id = state.deleteId;
+            if (!id) return;
+            const btn = $('instDeleteSubmit');
+            btn.disabled = true;
+            try {
+                await window.delete_instance(id);
+                closeDelete();
+                await refresh();
+            } catch (e) {
+                setText('instDeleteError', tr('instances.errGeneric', 'Une erreur est survenue.') + ' (' + errText(e) + ')');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        /* --------------------------------------------------------------- init */
+
+        function init() {
+            const grid = $('instGrid');
+            if (!grid) return; /* not on the app page */
+
+            grid.addEventListener('click', onGridClick);
+
+            $('instLoaderTabs').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-loader]');
+                if (!b || b.getAttribute('data-loader') === state.create.loader) return;
+                state.create.loader = b.getAttribute('data-loader');
+                renderLoaderTabs();
+                loadLoaderVersions();
+            });
+
+            $('instMcSelect').addEventListener('change', () => { loadLoaderVersions(); updateCreateBtn(); });
+            $('instShowAll').addEventListener('change', () => { populateMcVersions(); loadLoaderVersions(); });
+
+            $('instRamRange').addEventListener('input', updateRamUi);
+            $('instRamDefault').addEventListener('change', updateRamUi);
+
+            $('instNameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitCreate(); });
+            $('instEditName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitEdit(); });
+
+            [['instCreateModal', closeCreate], ['instEditModal', closeEdit], ['instDeleteModal', closeDelete]].forEach(([id, fn]) => {
+                $(id).addEventListener('mousedown', (e) => { if (e.target === $(id)) fn(); });
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                closeCreate(); closeEdit(); closeDelete();
+            });
+
+            const tabBtn = document.querySelector('.app-tab[data-tab="instances"]');
+            if (tabBtn) tabBtn.addEventListener('click', refresh);
+
+            document.addEventListener('cero:i18n-applied', () => { render(); updateRamUi(); });
+
+            installGameHooks();
+
+            if (window.get_system_ram) {
+                window.get_system_ram().then((mb) => { state.systemRam = Number(mb) || 0; }).catch(() => {});
+            }
+
+            refresh();
+        }
+
+        Cero.instances = {
+            refresh, openCreate, closeCreate, submitCreate,
+            closeEdit, submitEdit, closeDelete, submitDelete,
+        };
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+        else init();
+
+    })(window);
 </script>

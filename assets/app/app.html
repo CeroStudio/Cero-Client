@@ -10,146 +10,146 @@
 </head>
 <body class="bg-[var(--bg-color)] text-[var(--text-main)] overflow-hidden relative h-screen">
 
-    <canvas id="grainCanvas"></canvas>
+<canvas id="grainCanvas"></canvas>
 
-    <div id="launchOverlay" class="app-drag">
-        <div class="w-full max-w-sm px-8 select-none">
-            <div class="flex justify-center mb-8">
-                <div class="relative w-16 h-16">
-                    <svg class="spin-slow absolute inset-0 w-full h-full" viewBox="0 0 64 64" fill="none">
-                        <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
-                        <circle cx="32" cy="32" r="28" stroke="white" stroke-width="2" stroke-dasharray="40 136" stroke-linecap="round"/>
-                    </svg>
-                    <div class="absolute inset-2 rounded-full overflow-hidden bg-zinc-900 flex items-center justify-center">
-                        <img id="overlayAvatar" src="" alt="" class="w-full h-full object-cover hidden" style="image-rendering:pixelated">
-                        <span id="overlayIcon" class="text-xl">⛏️</span>
-                    </div>
+<div id="launchOverlay" class="app-drag">
+    <div class="w-full max-w-sm px-8 select-none">
+        <div class="flex justify-center mb-8">
+            <div class="relative w-16 h-16">
+                <svg class="spin-slow absolute inset-0 w-full h-full" viewBox="0 0 64 64" fill="none">
+                    <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+                    <circle cx="32" cy="32" r="28" stroke="white" stroke-width="2" stroke-dasharray="40 136" stroke-linecap="round"/>
+                </svg>
+                <div class="absolute inset-2 rounded-full overflow-hidden bg-zinc-900 flex items-center justify-center">
+                    <img id="overlayAvatar" src="" alt="" class="w-full h-full object-cover hidden" style="image-rendering:pixelated">
+                    <span id="overlayIcon" class="text-xl">⛏️</span>
                 </div>
             </div>
-            <div class="text-center mb-6">
-                <p class="text-xs font-bold uppercase tracking-[0.25em] text-white/40 mb-1">Lancement</p>
-                <p id="overlayVersion" class="text-lg font-bold">Minecraft</p>
-            </div>
-            <div class="mb-2">
-                <div class="w-full h-0.5 bg-white/10 rounded-full overflow-hidden">
-                    <div id="progressBar" class="h-full rounded-full progress-shimmer transition-all duration-500 ease-out" style="width: 0%"></div>
-                </div>
-            </div>
-            <div class="flex justify-between items-center mb-8">
-                <p id="currentStepLabel" class="text-xs text-white/60 font-medium truncate pr-4">Initialisation...</p>
-                <p id="progressPct" class="text-xs font-bold font-mono text-white/40 flex-shrink-0">0%</p>
-            </div>
-            <div id="stepsList" class="space-y-0"></div>
         </div>
+        <div class="text-center mb-6">
+            <p class="text-xs font-bold uppercase tracking-[0.25em] text-white/40 mb-1">Lancement</p>
+            <p id="overlayVersion" class="text-lg font-bold">Minecraft</p>
+        </div>
+        <div class="mb-2">
+            <div class="w-full h-0.5 bg-white/10 rounded-full overflow-hidden">
+                <div id="progressBar" class="h-full rounded-full progress-shimmer transition-all duration-500 ease-out" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="flex justify-between items-center mb-8">
+            <p id="currentStepLabel" class="text-xs text-white/60 font-medium truncate pr-4">Initialisation...</p>
+            <p id="progressPct" class="text-xs font-bold font-mono text-white/40 flex-shrink-0">0%</p>
+        </div>
+        <div id="stepsList" class="space-y-0"></div>
     </div>
+</div>
 
-    <div class="relative z-10 h-screen flex flex-col">
+<div class="relative z-10 h-screen flex flex-col">
 
-        <% import "../components/header.html" %>
+    <% import "../components/header.html" %>
 
-        <main class="app-drag flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
+    <main class="app-drag flex-1 flex flex-col gap-4 px-6 pb-6 overflow-hidden">
 
-            <% import "../components/tabs/play.html" %>
+        <% import "../components/tabs/play.html" %>
 
-            <% import "../components/tabs/instances.html" %>
+        <% import "../components/tabs/instances.html" %>
 
-            <% import "../components/tabs/chat.html" %>
+        <% import "../components/tabs/chat.html" %>
 
-            <% import "../components/tabs/settings.html" %>
+        <% import "../components/tabs/settings.html" %>
 
-            <div id="removeFriendModal" class="modal-backdrop">
-                <div class="modal">
-                    <div class="modal-header">
-                        <span class="modal-title">Retirer l'ami</span>
-                        <button class="wc-btn" onclick="closeRemoveFriendModal()">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
-                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body" style="text-align:center; padding: 24px 20px;">
-                        <img id="removeFriendAvatar" class="friend-head" style="width:48px;height:48px;margin:0 auto 12px;display:block;" src="" alt="">
-                        <p style="font-size:14px;font-weight:600;" id="removeFriendText">Retirer cet ami ?</p>
-                        <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Il ne verra plus votre statut en ligne.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-ghost" onclick="closeRemoveFriendModal()">Annuler</button>
-                        <button id="removeFriendConfirmBtn" class="btn-remove" onclick="confirmRemoveFriend()">Retirer</button>
-                    </div>
+        <div id="removeFriendModal" class="modal-backdrop">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">Retirer l'ami</span>
+                    <button class="wc-btn" onclick="closeRemoveFriendModal()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+                            <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="text-align:center; padding: 24px 20px;">
+                    <img id="removeFriendAvatar" class="friend-head" style="width:48px;height:48px;margin:0 auto 12px;display:block;" src="" alt="">
+                    <p style="font-size:14px;font-weight:600;" id="removeFriendText">Retirer cet ami ?</p>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Il ne verra plus votre statut en ligne.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-ghost" onclick="closeRemoveFriendModal()">Annuler</button>
+                    <button id="removeFriendConfirmBtn" class="btn-remove" onclick="confirmRemoveFriend()">Retirer</button>
                 </div>
             </div>
+        </div>
 
-            <div id="addFriendModal" class="modal-backdrop">
-                <div class="modal">
-                    <div class="modal-header">
-                        <span class="modal-title">Ajouter un ami</span>
-                        <button class="wc-btn" onclick="closeAddFriendModal()">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
-                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-xs text-[var(--text-muted)] mb-2">Pseudo Minecraft de la personne</p>
-                        <input id="addFriendInput" class="modal-input" type="text" maxlength="16" placeholder="Notch" autocomplete="off">
-                        <p id="addFriendError" class="modal-error"></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-ghost" onclick="closeAddFriendModal()">Annuler</button>
-                        <button id="addFriendSubmit" class="btn-primary" onclick="submitAddFriend()">Envoyer</button>
-                    </div>
+        <div id="addFriendModal" class="modal-backdrop">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">Ajouter un ami</span>
+                    <button class="wc-btn" onclick="closeAddFriendModal()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+                            <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-xs text-[var(--text-muted)] mb-2">Pseudo Minecraft de la personne</p>
+                    <input id="addFriendInput" class="modal-input" type="text" maxlength="16" placeholder="Notch" autocomplete="off">
+                    <p id="addFriendError" class="modal-error"></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-ghost" onclick="closeAddFriendModal()">Annuler</button>
+                    <button id="addFriendSubmit" class="btn-primary" onclick="submitAddFriend()">Envoyer</button>
                 </div>
             </div>
+        </div>
 
-            <div id="requestsModal" class="modal-backdrop">
-                <div class="modal">
-                    <div class="modal-header">
-                        <span class="modal-title">Demandes d'amis</span>
-                        <button class="wc-btn" onclick="closeRequestsModal()">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
-                                <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body" id="requestsBody">
-                        <div class="modal-empty">Chargement...</div>
-                    </div>
+        <div id="requestsModal" class="modal-backdrop">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">Demandes d'amis</span>
+                    <button class="wc-btn" onclick="closeRequestsModal()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+                            <line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="requestsBody">
+                    <div class="modal-empty">Chargement...</div>
                 </div>
             </div>
+        </div>
 
-        </main>
+    </main>
 
-        <%import "../components/footer.html"%>
-    </div>
+    <%import "../components/footer.html"%>
+</div>
 
-    <script>
-        function switchAppTab(tab) {
-            if (tab === 'message' && window.ceroWS && window.ceroWS.isMaintenance && window.ceroWS.isMaintenance()) {
-                return;
-            }
-            const onSettingsTab = document.getElementById('appTab-parametre').style.display !== 'none';
-            if (onSettingsTab && window.hasUnsavedSettings && window.hasUnsavedSettings()) {
-                window.confirmLeaveSettings(function() {
-                    doSwitchAppTab(tab);
-                });
-                return;
-            }
-            doSwitchAppTab(tab);
+<script>
+    function switchAppTab(tab) {
+        if (tab === 'message' && window.ceroWS && window.ceroWS.isMaintenance && window.ceroWS.isMaintenance()) {
+            return;
         }
-
-        function doSwitchAppTab(tab) {
-            document.querySelectorAll('.app-tab-panel').forEach(function(panel) {
-                panel.style.display = (panel.id === 'appTab-' + tab) ? '' : 'none';
+        const onSettingsTab = document.getElementById('appTab-parametre').style.display !== 'none';
+        if (onSettingsTab && window.hasUnsavedSettings && window.hasUnsavedSettings()) {
+            window.confirmLeaveSettings(function() {
+                doSwitchAppTab(tab);
             });
-            document.querySelectorAll('.app-tab').forEach(function(btn) {
-                btn.classList.toggle('active', btn.dataset.tab === tab);
-            });
-            if (tab !== 'jouer') closeVersionDropdown();
+            return;
         }
-    </script>
+        doSwitchAppTab(tab);
+    }
+
+    function doSwitchAppTab(tab) {
+        document.querySelectorAll('.app-tab-panel').forEach(function(panel) {
+            panel.style.display = (panel.id === 'appTab-' + tab) ? '' : 'none';
+        });
+        document.querySelectorAll('.app-tab').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        if (tab !== 'jouer') closeVersionDropdown();
+    }
+</script>
 </body>
 <script src="../js/core/config.js"></script>
 <script src="../js/core/i18n.js"></script>
@@ -164,6 +164,7 @@
 <script src="../js/features/friends.js"></script>
 <script src="../js/features/maintenance.js"></script>
 <script src="../js/features/launch.js"></script>
+<script src="../js/features/instances.js"></script>
 <script src="../js/app.js"></script>
 <script src="../js/header.js"></script>
 </html>
