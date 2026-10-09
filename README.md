@@ -37,7 +37,7 @@
 
 ## Features & Tasks
 
-- [x] **Instances**
+- [ ] **Instances**
 	- [x] Install a loader (e.g., Forge, Fabric, etc.)
 	- [x] Save and manage instances
     - [ ] Download mods from the UI
