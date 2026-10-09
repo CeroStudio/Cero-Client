@@ -145,8 +145,10 @@
             instances: [],
             manifest: null,
             systemRam: 0,
-            gameRunning: false,
-            launching: false,
+            running: new Set(),
+            busy: new Map(),
+            closing: new Set(),
+            errors: new Map(),
             editId: null,
             deleteId: null,
             create: { loader: 'vanilla', token: 0, loaderReady: true, submitting: false },
@@ -230,6 +232,7 @@
                 console.error('[instances] list failed', e);
                 state.instances = [];
             }
+            await syncRunning();
             render();
         }
 
@@ -239,12 +242,6 @@
                 if (lp !== 0) return lp;
                 return (b.createdAt || 0) - (a.createdAt || 0);
             });
-        }
-
-        function playLabel() {
-            if (state.gameRunning) return tr('instances.running', 'En jeu');
-            if (state.launching)   return tr('instances.launching', 'Lancement...');
-            return tr('instances.play', 'Jouer');
         }
 
         function cardHtml(inst) {
@@ -263,7 +260,29 @@
                 ? tr('instances.lastPlayed', 'Dernière partie : {date}', { date: fmtDate(inst.lastPlayed) })
                 : tr('instances.never', 'Jamais lancée');
 
-            const busy = state.gameRunning || state.launching;
+            const isRunning = state.running.has(inst.id);
+            const isClosing = state.closing.has(inst.id);
+            const prep = state.busy.get(inst.id);
+            const err = state.errors.get(inst.id);
+            const locked = isRunning || !!prep;
+
+            const liveTag = isRunning
+                ? `<span class="inst-badge inst-live">${esc(tr('instances.running', 'En jeu'))}</span>` : '';
+
+            let action;
+            if (isRunning) {
+                action = `<button class="inst-play inst-stop nodrag" type="button" data-act="stop" ${isClosing ? 'disabled' : ''}>
+                    ${isClosing ? '' : '■ '}${esc(isClosing ? tr('instances.stopping', 'Fermeture...') : tr('instances.stop', 'Fermer'))}
+                </button>`;
+            } else if (prep) {
+                const pct = Math.max(0, Math.min(100, prep.pct || 0));
+                action = `<button class="inst-play nodrag" type="button" data-act="play" disabled>
+                    <span class="inst-play-label">${esc(prep.step || tr('instances.launching', 'Lancement...'))}</span>
+                </button>
+                <div class="inst-progress"><div class="inst-progress-bar" style="width:${pct}%"></div></div>`;
+            } else {
+                action = `<button class="inst-play nodrag" type="button" data-act="play">▶ ${esc(tr('instances.play', 'Jouer'))}</button>`;
+            }
 
             return `
             <article class="inst-card card rounded-2xl" data-id="${esc(inst.id)}">
@@ -280,7 +299,7 @@
                                 <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </button>
-                        <button class="wc-btn inst-del nodrag" type="button" data-act="delete"
+                        <button class="wc-btn inst-del nodrag" type="button" data-act="delete" ${locked ? 'disabled' : ''}
                                 title="${esc(tr('instances.delete', 'Supprimer'))}" aria-label="${esc(tr('instances.delete', 'Supprimer'))}">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                                 <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -288,11 +307,9 @@
                         </button>
                     </div>
                 </div>
-                <div class="inst-tags">${tags}</div>
-                <p class="inst-last">${esc(last)}</p>
-                <button class="inst-play nodrag" type="button" data-act="play" ${busy ? 'disabled' : ''}>
-                    ${state.gameRunning || state.launching ? '' : '▶ '}${esc(playLabel())}
-                </button>
+                <div class="inst-tags">${tags}${liveTag}</div>
+                <p class="inst-last${err ? ' inst-last--err' : ''}">${esc(err || last)}</p>
+                ${action}
             </article>`;
         }
 
@@ -316,6 +333,7 @@
 
             switch (btn.getAttribute('data-act')) {
                 case 'play':   play(id); break;
+                case 'stop':   stop(id); break;
                 case 'edit':   openEdit(id); break;
                 case 'delete': openDelete(id); break;
             }
@@ -323,54 +341,124 @@
 
         /* ------------------------------------------------------------- launch */
 
+        function setError(id, msg) {
+            state.errors.set(id, msg);
+            setTimeout(() => {
+                if (state.errors.get(id) === msg) { state.errors.delete(id); render(); }
+            }, 8000);
+        }
+
         async function play(id) {
-            if (state.gameRunning || state.launching) return;
+            if (state.running.has(id) || state.busy.has(id)) return;
             const inst = state.instances.find((i) => i.id === id);
             if (!inst || !window.launch_instance) return;
 
-            state.launching = true;
+            state.errors.delete(id);
+            state.busy.set(id, { step: '', pct: 0 });
             render();
-
-            const label = inst.mcVersion + (inst.loader && inst.loader !== 'vanilla' ? ' · ' + loaderLabel(inst.loader) : '');
-            if (Cero.modules && Cero.modules.overlayShow) Cero.modules.overlayShow(label);
 
             try {
                 await window.launch_instance(id);
             } catch (e) {
-                state.launching = false;
-                render();
+                state.busy.delete(id);
                 const msg = errText(e);
-                if (msg === 'already_running') {
-                    if (Cero.modules && Cero.modules.overlayHide) Cero.modules.overlayHide();
-                } else if (Cero.modules && Cero.modules.overlayError) {
-                    Cero.modules.overlayError(msg);
-                }
+                if (msg === 'already_running') await syncRunning();
+                else setError(id, msg);
+                render();
             }
         }
 
-        function wrapHook(name, before) {
+        async function stop(id) {
+            if (!state.running.has(id) || state.closing.has(id) || !window.kill_instance) return;
+            state.closing.add(id);
+            render();
+            try {
+                await window.kill_instance(id);
+            } catch (e) {
+                state.closing.delete(id);
+                if (errText(e) === 'not_running') state.running.delete(id);
+                render();
+            }
+        }
+
+        async function syncRunning() {
+            if (!window.running_games) return;
+            try {
+                const keys = parseMaybeJson(await window.running_games());
+                state.running = new Set((Array.isArray(keys) ? keys : []).filter((k) => k !== 'play'));
+            } catch (_) { /* keep the current state */ }
+        }
+
+        function paintProgress(id) {
+            const prep = state.busy.get(id);
+            const grid = $('instGrid');
+            if (!prep || !grid) return;
+            const card = Array.from(grid.children).find((c) => c.getAttribute('data-id') === id);
+            if (!card) return;
+            const label = card.querySelector('.inst-play-label');
+            const bar = card.querySelector('.inst-progress-bar');
+            if (label) label.textContent = prep.step || tr('instances.launching', 'Lancement...');
+            if (bar) bar.style.width = Math.max(0, Math.min(100, prep.pct || 0)) + '%';
+        }
+
+        function wrapGameHook(name, handler) {
             const prev = window[name];
-            window[name] = function () {
-                try { before.apply(this, arguments); } catch (e) { console.error('[instances]', e); }
+            window[name] = function (key) {
+                if (key && key !== 'play') {
+                    try { handler(key); } catch (e) { console.error('[instances]', e); }
+                    return undefined;
+                }
                 return typeof prev === 'function' ? prev.apply(this, arguments) : undefined;
             };
         }
 
         function installGameHooks() {
-            wrapHook('_onGameStart', function () {
-                state.gameRunning = true;
-                state.launching = false;
+            wrapGameHook('_onGameStart', function (key) {
+                state.running.add(key);
+                state.busy.delete(key);
+                state.errors.delete(key);
                 render();
+                if (window.get_settings) {
+                    window.get_settings().then((s) => {
+                        if (s && s.hideOnLaunch && window.close_to_tray) window.close_to_tray();
+                    }).catch(() => {});
+                }
             });
-            wrapHook('_onGameStop', function () {
-                state.gameRunning = false;
-                state.launching = false;
+
+            wrapGameHook('_onGameStop', function (key) {
+                state.running.delete(key);
+                state.closing.delete(key);
+                state.busy.delete(key);
                 refresh(); /* last-played changed */
+
+                if (window.get_settings && window.show_window && window.running_games) {
+                    Promise.all([window.get_settings(), window.running_games()]).then(([s, keys]) => {
+                        const left = parseMaybeJson(keys);
+                        if (s && s.reopenOnStop && Array.isArray(left) && left.length === 0) window.show_window();
+                    }).catch(() => {});
+                }
             });
-            wrapHook('onLaunchError', function () {
-                state.launching = false;
+
+            window.onInstanceProgress = function (key, step, pct) {
+                if (state.running.has(key)) return;
+                const cur = state.busy.get(key) || {};
+                cur.step = step;
+                cur.pct = pct;
+                state.busy.set(key, cur);
+                paintProgress(key);
+            };
+
+            window.onInstanceError = function (key, step) {
+                state.busy.delete(key);
+                setError(key, step || tr('instances.errGeneric', 'Une erreur est survenue.'));
                 render();
-            });
+            };
+
+            window.onInstanceDone = function (key) {
+                if (!state.running.has(key)) state.busy.delete(key);
+                state.closing.delete(key);
+                render();
+            };
         }
 
         /* ------------------------------------------------------------- create */

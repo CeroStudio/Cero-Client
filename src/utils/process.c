@@ -36,17 +36,19 @@ static void append_escaped(char* dst, size_t cap, size_t* len, const char* arg) 
     if (needs_quotes && *len < cap) dst[(*len)++] = '"';
 }
 
-int process_run(const char* exe, const char* const argv[]) {
-    static char cmdline[131072];
+int process_spawn(const char* exe, const char* const argv[], process_handle_t* out) {
+    const size_t cap = 131072;
+    char* cmdline = (char*)malloc(cap);
+    if (!cmdline) return -1;
     size_t len = 0;
 
-    append_escaped(cmdline, sizeof(cmdline), &len, exe);
+    append_escaped(cmdline, cap, &len, exe);
     for (int i = 1; argv[i] != NULL; i++) {
-        if (len < sizeof(cmdline)) cmdline[len++] = ' ';
-        append_escaped(cmdline, sizeof(cmdline), &len, argv[i]);
+        if (len < cap) cmdline[len++] = ' ';
+        append_escaped(cmdline, cap, &len, argv[i]);
     }
-    if (len < sizeof(cmdline)) cmdline[len] = '\0';
-    else cmdline[sizeof(cmdline) - 1] = '\0';
+    if (len < cap) cmdline[len] = '\0';
+    else cmdline[cap - 1] = '\0';
 
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
@@ -56,39 +58,58 @@ int process_run(const char* exe, const char* const argv[]) {
 
     DWORD flags = GetConsoleWindow() ? 0 : CREATE_NO_WINDOW;
 
-    if (!CreateProcessA(exe, cmdline, NULL, NULL, TRUE, flags, NULL, NULL, &si, &pi)) {
+    BOOL ok = CreateProcessA(exe, cmdline, NULL, NULL, TRUE, flags, NULL, NULL, &si, &pi);
+    free(cmdline);
+    if (!ok) {
         log_msg("error", "CreateProcess failed: %lu\n", GetLastError());
         return -1;
     }
 
-    g_mc_process = pi.hProcess;
-
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    DWORD code = 0;
-    GetExitCodeProcess(pi.hProcess, &code);
-
-    CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    g_mc_process = NULL;
+    *out = pi.hProcess;
+    return 0;
+}
 
+int process_wait(process_handle_t h) {
+    WaitForSingleObject(h, INFINITE);
+    DWORD code = 0;
+    GetExitCodeProcess(h, &code);
     return (int)code;
 }
 
+void process_close(process_handle_t h) {
+    if (h) CloseHandle(h);
+}
+
+void process_terminate(process_handle_t h) {
+    if (h) TerminateProcess(h, 0);
+}
+
+int process_run(const char* exe, const char* const argv[]) {
+    process_handle_t h;
+    if (process_spawn(exe, argv, &h) != 0) return -1;
+
+    g_mc_process = h;
+    int code = process_wait(h);
+    g_mc_process = NULL;
+    process_close(h);
+    return code;
+}
+
 void process_kill(void) {
-    if (g_mc_process) {
-        TerminateProcess(g_mc_process, 0);
-    }
+    HANDLE h = g_mc_process;
+    if (h) TerminateProcess(h, 0);
 }
 
 #else
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <errno.h>
 
 pid_t g_mc_process = -1;
 
-int process_run(const char* exe, const char* const argv[]) {
+int process_spawn(const char* exe, const char* const argv[], process_handle_t* out) {
     pid_t pid = fork();
     if (pid < 0) {
         log_msg("error", "fork failed\n");
@@ -99,20 +120,62 @@ int process_run(const char* exe, const char* const argv[]) {
         _exit(127);
     }
 
-    g_mc_process = pid;
+    *out = pid;
+    return 0;
+}
 
+int process_wait(process_handle_t h) {
+#ifdef WNOWAIT
+    siginfo_t info;
+    int r;
+    memset(&info, 0, sizeof(info));
+    do {
+        r = waitid(P_PID, (id_t)h, &info, WEXITED | WNOWAIT);
+    } while (r < 0 && errno == EINTR);
+    if (r < 0) return -1;
+
+    if (info.si_code == CLD_EXITED) return info.si_status;
+    return -1;
+#else
     int status = 0;
-    if (waitpid(pid, &status, 0) < 0) return -1;
-
-    g_mc_process = -1;
+    pid_t r;
+    do {
+        r = waitpid(h, &status, 0);
+    } while (r < 0 && errno == EINTR);
+    if (r < 0) return -1;
 
     if (WIFEXITED(status)) return WEXITSTATUS(status);
     return -1;
+#endif
+}
+
+void process_close(process_handle_t h) {
+#ifdef WNOWAIT
+    int status = 0;
+    while (waitpid(h, &status, 0) < 0 && errno == EINTR) { }
+#else
+    (void)h;
+#endif
+}
+
+void process_terminate(process_handle_t h) {
+    if (h > 0) kill(h, SIGTERM);
+}
+
+int process_run(const char* exe, const char* const argv[]) {
+    process_handle_t h;
+    if (process_spawn(exe, argv, &h) != 0) return -1;
+
+    g_mc_process = h;
+    int code = process_wait(h);
+    g_mc_process = -1;
+    return code;
 }
 
 void process_kill(void) {
-    if (g_mc_process > 0) {
-        kill(g_mc_process, SIGTERM);
+    pid_t p = g_mc_process;
+    if (p > 0) {
+        kill(p, SIGTERM);
     }
 }
 

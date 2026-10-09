@@ -9,6 +9,7 @@
 #include "../../include/ipc/instance_handlers.h"
 #include "../../include/instances/instance.h"
 #include "../../include/launch/launch_minecraft.h"
+#include "../../include/launch/game_registry.h"
 #include "../../include/launch/manifest.h"
 #include "../../include/app/app_state.h"
 #include "../../include/config/config.h"
@@ -131,18 +132,30 @@ void on_set_instance_ram(const char* id, const char* req, void* arg) {
     ui_return(arg, id, ok ? 0 : 1, ok ? "\"ok\"" : "\"not_found\"");
 }
 
-/* ---- launch (mirrors game_handlers.c's on_launch, but for an instance) ---- */
-
 typedef struct {
-    char  instance_id[64];
-    void* ui;
-    int*  game_running;
+    char     instance_id[64];
+    void*    ui;
+    unsigned gen;
 } InstanceLaunchArgs;
+
+static void js_safe_key(const char* in, char* out, size_t cap) {
+    size_t n = 0;
+    for (const char* p = in; *p && n + 1 < cap; p++) {
+        char c = *p;
+        int ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                 (c >= '0' && c <= '9') || c == '_' || c == '-';
+        out[n++] = ok ? c : '_';
+    }
+    out[n] = '\0';
+}
 
 static void instance_launch_progress(const char* step, int pct, void* userdata) {
     LaunchUserdata* ud = (LaunchUserdata*)userdata;
     void* w = ud ? ud->ui : NULL;
-    if (!w) return;
+    if (!w || !ud->key) return;
+
+    char key[64];
+    js_safe_key(ud->key, key, sizeof(key));
 
     char step_safe[256];
     size_t si = 0, di = 0;
@@ -152,11 +165,13 @@ static void instance_launch_progress(const char* step, int pct, void* userdata) 
     }
     step_safe[di] = '\0';
 
-    char js[512];
+    char js[640];
     if (pct < 0) {
-        snprintf(js, sizeof(js), "if(window.onLaunchError) onLaunchError(\"%s\")", step_safe);
+        snprintf(js, sizeof(js),
+                 "if(window.onInstanceError) onInstanceError(\"%s\",\"%s\")", key, step_safe);
     } else {
-        snprintf(js, sizeof(js), "if(window.onLaunchProgress) onLaunchProgress(\"%s\",%d)", step_safe, pct);
+        snprintf(js, sizeof(js),
+                 "if(window.onInstanceProgress) onInstanceProgress(\"%s\",\"%s\",%d)", key, step_safe, pct);
     }
     ui_eval(w, js);
 }
@@ -167,18 +182,23 @@ static DWORD WINAPI instance_launch_thread(LPVOID arg) {
 static void* instance_launch_thread(void* arg) {
 #endif
     InstanceLaunchArgs* la = (InstanceLaunchArgs*)arg;
-    LaunchUserdata ud = { la->ui, la->game_running };
+
+    LaunchUserdata ud = { la->ui, NULL, la->instance_id, la->gen };
     launch_instance(la->instance_id, instance_launch_progress, &ud);
+
+    game_registry_finish(la->instance_id, la->gen);
+
+    char key[64];
+    js_safe_key(la->instance_id, key, sizeof(key));
+    char js[160];
+    snprintf(js, sizeof(js), "if(window.onInstanceDone) onInstanceDone(\"%s\")", key);
+    ui_eval(la->ui, js);
+
     free(la);
     return 0;
 }
 
 void on_launch_instance(const char* id, const char* req, void* arg) {
-    if (game_running) {
-        ui_return(arg, id, 1, "\"already_running\"");
-        return;
-    }
-
     cJSON* args = cJSON_Parse(req);
     char inst_id[64];
     arr_get_str(args, 0, inst_id, sizeof(inst_id));
@@ -186,21 +206,62 @@ void on_launch_instance(const char* id, const char* req, void* arg) {
 
     if (!inst_id[0]) { ui_return(arg, id, 1, "\"no_id\""); return; }
 
+    unsigned gen = game_registry_begin(inst_id);
+    if (!gen) {
+        ui_return(arg, id, 1, "\"already_running\"");
+        return;
+    }
+
     InstanceLaunchArgs* la = malloc(sizeof(InstanceLaunchArgs));
+    if (!la) {
+        game_registry_finish(inst_id, gen);
+        ui_return(arg, id, 1, "\"alloc_error\"");
+        return;
+    }
     snprintf(la->instance_id, sizeof(la->instance_id), "%s", inst_id);
-    la->ui = arg;
-    la->game_running = (int*)&game_running;
+    la->ui  = arg;
+    la->gen = gen;
 
 #ifdef _WIN32
     HANDLE h = CreateThread(NULL, 0, instance_launch_thread, la, 0, NULL);
     if (h) CloseHandle(h);
+    else {
+        game_registry_finish(inst_id, gen);
+        free(la);
+        ui_return(arg, id, 1, "\"thread_error\"");
+        return;
+    }
 #else
     pthread_t t;
-    pthread_create(&t, NULL, instance_launch_thread, la);
+    if (pthread_create(&t, NULL, instance_launch_thread, la) != 0) {
+        game_registry_finish(inst_id, gen);
+        free(la);
+        ui_return(arg, id, 1, "\"thread_error\"");
+        return;
+    }
     pthread_detach(t);
 #endif
 
     ui_return(arg, id, 0, "\"ok\"");
+}
+
+void on_kill_instance(const char* id, const char* req, void* arg) {
+    cJSON* args = cJSON_Parse(req);
+    char inst_id[64];
+    arr_get_str(args, 0, inst_id, sizeof(inst_id));
+    if (args) cJSON_Delete(args);
+
+    if (!inst_id[0]) { ui_return(arg, id, 1, "\"no_id\""); return; }
+
+    int hit = game_registry_kill(inst_id);
+    ui_return(arg, id, hit ? 0 : 1, hit ? "\"ok\"" : "\"not_running\"");
+}
+
+void on_running_games(const char* id, const char* req, void* arg) {
+    (void)req;
+    char buf[2048];
+    game_registry_running_json(buf, sizeof(buf));
+    ui_return(arg, id, 0, buf);
 }
 
 /* ---- version listing (vanilla / fabric / forge) ---- */

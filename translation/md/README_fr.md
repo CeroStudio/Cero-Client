@@ -38,8 +38,9 @@
 ## Fonctionnalités & Tâches
 
 - [ ] **Instances**
-    - [ ] Installer un chargeur (ex. : Forge, Fabric, etc.)
-    - [ ] Sauvegarder et gérer les instances
+    - [x] Installer un chargeur (ex. : Forge, Fabric, etc.)
+    - [x] Sauvegarder et gérer les instances
+    - [ ] Télécharger des mods depuis l'UI
 - [x] **Jouer à Minecraft**
     - [x] Télécharger le manifeste
     - [x] Lire les métadonnées
@@ -51,7 +52,7 @@
     - [x] Installer Forge
     - [x] Installer Quilt
     - [x] Démarrer Fabric
-    - [ ] Démarrer Forge
+    - [x] Démarrer Forge
     - [x] Démarrer Quilt
 - [x] **Connexion au compte Microsoft**
 - [x] Créer un installateur
