@@ -1,4 +1,5 @@
 #include "../../include/launch/launch_minecraft.h"
+#include "../../include/launch/launch_lock.h"
 #include "../../include/launch/launch_ctx.h"
 #include "../../include/launch/fabric.h"
 #include "../../include/launch/forge.h"
@@ -21,8 +22,8 @@
 #include <stdio.h>
 #include <string.h>
 
-void launch_minecraft(const char* version,
-                      launch_progress_cb cb, void* userdata) {
+static void launch_minecraft_impl(const char* version,
+                                  launch_progress_cb cb, void* userdata) {
     LaunchCtx ctx;
     ctx.cb = cb;
     ctx.userdata = userdata;
@@ -180,7 +181,8 @@ void launch_minecraft(const char* version,
     vm_free(root);
 }
 
-int launch_instance(const char* instance_id, launch_progress_cb cb, void* userdata) {
+static int launch_instance_impl(const char* instance_id,
+                                launch_progress_cb cb, void* userdata) {
     LaunchCtx ctx;
     ctx.cb = cb;
     ctx.userdata = userdata;
@@ -445,4 +447,19 @@ int launch_instance(const char* instance_id, launch_progress_cb cb, void* userda
     if (loader_root) vm_free(loader_root);
     vm_free(root);
     return 1;
+}
+
+void launch_minecraft(const char* version,
+                      launch_progress_cb cb, void* userdata) {
+    launch_prep_lock(cb, userdata);
+    launch_minecraft_impl(version, cb, userdata);
+    launch_prep_unlock();
+}
+
+int launch_instance(const char* instance_id,
+                    launch_progress_cb cb, void* userdata) {
+    launch_prep_lock(cb, userdata);
+    int r = launch_instance_impl(instance_id, cb, userdata);
+    launch_prep_unlock();
+    return r;
 }

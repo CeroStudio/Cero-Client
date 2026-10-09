@@ -137,6 +137,8 @@ void launcher_bind_ui(void) {
     ui_bind(w, "rename_instance", on_rename_instance, w);
     ui_bind(w, "set_instance_ram", on_set_instance_ram, w);
     ui_bind(w, "launch_instance", on_launch_instance, w);
+    ui_bind(w, "kill_instance", on_kill_instance, w);
+    ui_bind(w, "running_games", on_running_games, w);
     ui_bind(w, "get_mc_versions", on_get_mc_versions, w);
     ui_bind(w, "get_forge_versions", on_get_forge_versions, w);
     ui_bind(w, "get_fabric_versions", on_get_fabric_versions, w);

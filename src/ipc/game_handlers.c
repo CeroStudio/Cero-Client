@@ -9,6 +9,7 @@
 #include "../../include/ipc/game_handlers.h"
 #include "../../include/app/app_state.h"
 #include "../../include/launch/launch_minecraft.h"
+#include "../../include/launch/game_registry.h"
 #include "../../include/utils/process.h"
 #include "../../include/ui/ui.h"
 #include "../../include/core/logger.h"
@@ -17,9 +18,10 @@
 #include <string.h>
 
 typedef struct {
-    char  version[64];
-    void* ui;
-    int* game_running;
+    char     version[64];
+    void*    ui;
+    int*     game_running;
+    unsigned gen;
 } LaunchArgs;
 
 static void launch_progress(const char* step, int pct, void* userdata) {
@@ -53,14 +55,16 @@ static DWORD WINAPI launch_thread(LPVOID arg) {
 static void* launch_thread(void* arg) {
 #endif
     LaunchArgs* la = (LaunchArgs*)arg;
-    LaunchUserdata ud = { la->ui, la->game_running };
+    LaunchUserdata ud = { la->ui, la->game_running, "play", la->gen };
     launch_minecraft(la->version, launch_progress, &ud);
+    game_registry_finish("play", la->gen);
     free(la);
     return 0;
 }
 
 void on_launch(const char* id, const char* req, void* arg) {
-    if (game_running) {
+    unsigned gen = game_registry_begin("play");
+    if (!gen) {
         ui_return(arg, id, 1, "\"already_running\"");
         return;
     }
@@ -77,6 +81,7 @@ void on_launch(const char* id, const char* req, void* arg) {
     }
 
     if (version[0] == '\0') {
+        game_registry_finish("play", gen);
         ui_return(arg, id, 1, "\"no_version\"");
         return;
     }
@@ -84,6 +89,12 @@ void on_launch(const char* id, const char* req, void* arg) {
     log_msg("info", "Launch requested for version: %s\n", version);
 
     LaunchArgs* la = malloc(sizeof(LaunchArgs));
+    if (!la) {
+        game_registry_finish("play", gen);
+        ui_return(arg, id, 1, "\"alloc_error\"");
+        return;
+    }
+    la->gen = gen;
     strncpy(la->version, version, sizeof(la->version) - 1);
     la->version[sizeof(la->version)-1] = '\0';
     la->ui = arg;
@@ -103,7 +114,7 @@ void on_launch(const char* id, const char* req, void* arg) {
 
 void on_kill_game(const char* id, const char* req, void* arg) {
     (void)req;
-    process_kill();
+    if (!game_registry_kill("play")) process_kill();
     ui_return(arg, id, 0, "\"ok\"");
 }
 
