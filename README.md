@@ -37,10 +37,13 @@
 
 ## Features & Tasks
 
-- [ ] **Instances**
+- [x] **Instances**
 	- [x] Install a loader (e.g., Forge, Fabric, etc.)
 	- [x] Save and manage instances
+<<<<<<< HEAD
     - [ ] Download mods from the UI
+=======
+>>>>>>> dff5ec020af50cb20ff3e16843020e849fa79de3
 - [x] **Play Minecraft**
 	- [x] Download Manifest
 	- [x] Read Metadata
