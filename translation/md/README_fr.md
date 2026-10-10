@@ -63,7 +63,7 @@
     - [ ] Inviter dans son monde
     - [x] Ajouter un ami
     - [x] Supprimer un ami
-- [ ] Ajouter le support d'Android `Très dur (pour moi)`
+- [ ] Create an Android App
 - [x] Support multilingue
 
 ---
