@@ -63,7 +63,7 @@
     - [ ] Invite in his world
     - [x] Add Friend
     - [x] Remove Friend
-- [ ] Add Android Support `Very hard! (for me)`
+- [ ] Create an Android App
 - [x] Multi Language Support
 
 ---
